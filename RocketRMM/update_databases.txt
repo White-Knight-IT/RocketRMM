@@ -1,0 +1,2 @@
+dotnet ef database update --context LogsDbContext
+dotnet ef database update --context UserProfilesDbContext

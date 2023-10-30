@@ -1,0 +1,4 @@
+CREATE DATABASE rocketrmmdb;
+CREATE USER 'rocketrmmcoreservice'@'localhost' IDENTIFIED BY 'wellknownpassword';
+GRANT ALL ON rocketrmmdb.* TO 'rocketrmmcoreservice'@'localhost';
+FLUSH PRIVILEGES;
