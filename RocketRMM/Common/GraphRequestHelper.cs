@@ -243,7 +243,7 @@ namespace RocketRMM.Common
         /// <param name="asApp">As application or as delegated user</param>
         /// <param name="contentHeader">Set the content header for the type of data we want returned</param>
         /// <returns>A byte[] representing content returned in the response</returns>
-        public static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "")
+        internal static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "")
         {
             List<byte> data = new();
             Dictionary<string, string> headers;

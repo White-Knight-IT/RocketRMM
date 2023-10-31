@@ -11,8 +11,9 @@ using RocketRMM.Data.Logging;
 using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data;
 using Microsoft.Extensions.DependencyInjection;
+using System.Drawing.Text;
 
-Console.WriteLine(@"                                                                    /\
+Console.WriteLine($@"                                                                    /\
  _____                _           _    _____   __  __  __  __      |--|
 |  __ \              | |         | |  |  __ \ |  \/  ||  \/  |     |--|
 | |__) |  ___    ___ | | __  ___ | |_ | |__) || \  / || \  / |    /|/\|\
@@ -28,7 +29,8 @@ Created by Ian Harris (@knightian) - White Knight IT - https://whiteknightit.com
 
 Licensed under the AGPL-3.0 License + Security License Addendum
 
-v");
+v{CoreEnvironment.CoreVersion}
+");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,21 +53,24 @@ CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
 CoreEnvironment.KestrelHttps = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url").Trim() ?? "https://localhost:7074";
 CoreEnvironment.KestrelHttp = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Http:Url").Trim() ?? "https://localhost:7073";
 
-/*
 // Build Data/Cache directories if they don't exist
 CoreEnvironment.DataAndCacheDirectoriesBuild();
 
-// Update DB if new manifest or create if not exist
-await CoreEnvironment.UpdateDbContexts();
-
-// These bytes form the basis of persistent but importantly unique seed entropy throughout crypto functions in this API
-await CoreEnvironment.GetEntropyBytes();
-
-// We will import our ApiZeroConf settings else try find bootstrap app to build from
-while (!CoreZeroConfiguration.ImportApiZeroConf(ref builder))
+// We skip a lot of the setup/config stuff if it is a DB migration
+if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
 {
-    Thread.CurrentThread.Join(10000);
-}*/
+    // Update DB if new manifest or create if not exist
+    await CoreEnvironment.UpdateDbContexts();
+
+    // These bytes form the basis of persistent but importantly unique seed entropy throughout crypto functions in this API
+    await CoreEnvironment.GetEntropyBytes();
+
+    // We will import our ApiZeroConf settings else try find bootstrap app to build from
+    while (!CoreZeroConfiguration.ImportApiZeroConf(ref builder))
+    {
+        Thread.CurrentThread.Join(10000);
+    }
+}
 
 // Ties the API to an Azure AD app for auth
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "ZeroConf:AzureAd");

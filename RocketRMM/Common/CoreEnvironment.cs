@@ -11,56 +11,57 @@ namespace RocketRMM.Common
 {
     internal class CoreEnvironment
     {
-        public enum ProductionSecretStores { EncryptedFile };
+        internal enum ProductionSecretStores { EncryptedFile };
         // Roles for managing permissions
-        public static readonly string RoleOwner = "owner";
-        public static readonly string RoleAdmin = "admin";
-        public static readonly string RoleEditor = "editor";
-        public static readonly string RoleReader = "reader";
+        internal static readonly string RoleOwner = "owner";
+        internal static readonly string RoleAdmin = "admin";
+        internal static readonly string RoleEditor = "editor";
+        internal static readonly string RoleReader = "reader";
 #if DEBUG
-        public static readonly bool IsDebug = true;
+        internal static readonly bool IsDebug = true;
 #else
-            public static readonly bool IsDebug = false;
+            internal static readonly bool IsDebug = false;
 #endif
-        public static readonly string WorkingDir = Directory.GetCurrentDirectory();
-        public static readonly string DataDir = $"{WorkingDir}/Data";
-        public static string CacheDir = $"{DataDir}/Cache";
-        public static string PersistentDir = ".";
-        public static string WebRootPath = $"{WorkingDir}/wwwroot";
-        public static readonly string ApiHeader = "Api";
-        public static readonly string ApiAccessScope = "rocketrmm-api.access";
-        public static readonly string FfppSimulatedAuthUsername = "RocketRMM Simulated Authentication";
-        public static string RocketRmmFrontEndUri = "http://localhost";
-        public static string Db = "rocketrmmdb";
-        public static string DbUser = "sa";
-        public static string DbPassword = "localdevroot!!!1";
-        public static string DbServer = "localhost";
-        public static string DbServerPort = "1433";
-        public static List<double> ApiRouteVersions = new() { 1.0 };
-        public static ApiVersionSet? ApiVersionSet { get; set; }
-        public static readonly ApiVersion ApiDev = new(1.1);
-        public static readonly ApiVersion ApiV10 = new(ApiRouteVersions[0]);
-        public static readonly ApiVersion ApiV11 = ApiDev;
-        public static readonly ApiVersion ApiCurrent = new(ApiRouteVersions[^1]);
-        public static readonly DateTime Started = DateTime.UtcNow;
-        public static readonly int DbBackoffMs = 20;
-        public static bool SimulateAuthenticated = false;
-        public static bool ShowDevEnvEndpoints = false;
-        public static bool ShowSwaggerUi = false;
-        public static bool RunSwagger = false;
-        public static bool ServeStaticFiles = false;
-        public static bool UseHttpsRedirect = true;
-        public static string? DeviceTag = string.Empty;
-        public static string KestrelHttp = "https://localhost:7073";
-        public static string KestrelHttps = "https://localhost:7074";
-        public static long RunErrorCount = 0;
-        public static bool IsBoostrapped = false;
-        public static List<AccessToken> AccessTokenCache = new();
-        public static readonly string DefaultSystemUsername = "HAL";
+        internal static readonly string CoreVersion = "0.0.1:alpha";
+        internal static readonly string WorkingDir = Directory.GetCurrentDirectory();
+        internal static readonly string DataDir = $"{WorkingDir}/Data";
+        internal static string CacheDir = $"{DataDir}/Cache";
+        internal static string PersistentDir = ".";
+        internal static string WebRootPath = $"{WorkingDir}/wwwroot";
+        internal static readonly string ApiHeader = "Api";
+        internal static readonly string ApiAccessScope = "rocketrmm-api.access";
+        internal static readonly string FfppSimulatedAuthUsername = "RocketRMM Simulated Authentication";
+        internal static string RocketRmmFrontEndUri = "http://localhost";
+        internal static string Db = "rocketrmmdb";
+        internal static string DbUser = "sa";
+        internal static string DbPassword = "localdevroot!!!1";
+        internal static string DbServer = "localhost";
+        internal static string DbServerPort = "1433";
+        internal static List<double> ApiRouteVersions = new() { 1.0 };
+        internal static ApiVersionSet? ApiVersionSet { get; set; }
+        internal static readonly ApiVersion ApiDev = new(1.1);
+        internal static readonly ApiVersion ApiV10 = new(ApiRouteVersions[0]);
+        internal static readonly ApiVersion ApiV11 = ApiDev;
+        internal static readonly ApiVersion ApiCurrent = new(ApiRouteVersions[^1]);
+        internal static readonly DateTime Started = DateTime.UtcNow;
+        internal static readonly int DbBackoffMs = 20;
+        internal static bool SimulateAuthenticated = false;
+        internal static bool ShowDevEnvEndpoints = false;
+        internal static bool ShowSwaggerUi = false;
+        internal static bool RunSwagger = false;
+        internal static bool ServeStaticFiles = false;
+        internal static bool UseHttpsRedirect = true;
+        internal static string? DeviceTag = string.Empty;
+        internal static string KestrelHttp = "https://localhost:7073";
+        internal static string KestrelHttps = "https://localhost:7074";
+        internal static long RunErrorCount = 0;
+        internal static bool IsBoostrapped = false;
+        internal static List<AccessToken> AccessTokenCache = new();
+        internal static readonly string DefaultSystemUsername = "HAL";
         /// <summary>
         /// Build data directories including cache directories if they don't exist
         /// </summary>
-        public static void DataAndCacheDirectoriesBuild()
+        internal static void DataAndCacheDirectoriesBuild()
         {
             Directory.CreateDirectory(CacheDir);
             Directory.CreateDirectory(DataDir);
@@ -74,7 +75,7 @@ namespace RocketRMM.Common
         /// Gets a unique 32 byte Device ID
         /// </summary>
         /// <returns>DeviceId as byte[32] array</returns>
-        public static async Task<byte[]> GetDeviceId()
+        internal static async Task<byte[]> GetDeviceId()
         {
             byte[] hmacSalt = UTF8Encoding.UTF8.GetBytes($"ffppDevId{await GetDeviceIdTokenSeed()}seedBytes");
 
@@ -110,7 +111,7 @@ namespace RocketRMM.Common
         /// Shuts down the API (terminates)
         /// </summary>
         /// <param name="error"></param>
-        public static void ShutDownApi(int error = 0)
+        internal static void ShutDownApi(int error = 0)
         {
             System.Environment.Exit(error);
         }
@@ -118,9 +119,9 @@ namespace RocketRMM.Common
         /// <summary>
         /// Update DB with latest migrations
         /// </summary>
-        public static async Task<bool> UpdateDbContexts()
+        internal static async Task<bool> UpdateDbContexts()
         {
-            /*try
+            try
             {
                 using (LogsDbContext logsDb = new())
                 {
@@ -137,7 +138,7 @@ namespace RocketRMM.Common
             catch(Exception ex)
             {
                 Console.WriteLine($"Didn't create DB tables, this is expected if they already exist - server: {CoreEnvironment.DbServer} - port: {CoreEnvironment.DbServerPort}");
-            }*/
+            }
 
             return false;
         }
@@ -146,7 +147,7 @@ namespace RocketRMM.Common
         /// 
         /// </summary>
         /// <returns></returns>
-        public static async Task<byte[]> GetEntropyBytes()
+        internal static async Task<byte[]> GetEntropyBytes()
         {
             string entropyBytesPath = $"{PersistentDir}/unique.entropy.bytes";
             if (!File.Exists(entropyBytesPath))
@@ -161,7 +162,7 @@ namespace RocketRMM.Common
         /// 
         /// </summary>
         /// <returns></returns>
-        public static async Task<bool> CheckForBootstrap()
+        internal static async Task<bool> CheckForBootstrap()
         {
             string bootstrapPath = $"{PersistentDir}/bootstrap.json";
             try
@@ -193,7 +194,7 @@ namespace RocketRMM.Common
         /// 
         /// </summary>
         /// <returns></returns>
-        public static async Task<string> GetDeviceTag()
+        internal static async Task<string> GetDeviceTag()
         {
             return (await CoreEnvironment.GetDeviceIdTokenSeed())[^6..];
         }
@@ -227,12 +228,11 @@ namespace RocketRMM.Common
             }
         }
 
-        public struct ApiTokenStatus
+        internal struct ApiTokenStatus
         {
             public ApiTokenStatus()
             {
                 refreshToken = false;
-                exchangeRefreshToken = false;
 
                 if (!string.IsNullOrEmpty(Secrets.RefreshToken))
                 {
@@ -240,29 +240,28 @@ namespace RocketRMM.Common
                 }
             }
 
-            public bool refreshToken { get; set; }
-            public bool exchangeRefreshToken { get; set; }
+            internal bool refreshToken { get; set; }
         }
 
-        public struct AccessToken
+        internal struct AccessToken
         {
-            public string AppId { get; set; }
-            public bool AsApp { get; set; }
-            public string TenantId { get; set; }
-            public string Scope { get; set; }
-            public string Token { get; set; }
-            public long Expires { get; set; }
+            internal string AppId { get; set; }
+            internal bool AsApp { get; set; }
+            internal string TenantId { get; set; }
+            internal string Scope { get; set; }
+            internal string Token { get; set; }
+            internal long Expires { get; set; }
         }
 
         /// <summary>
         /// This is used to store the secrets in an encrypted file
         /// </summary>
-        public static class Secrets
+        internal static class Secrets
         {
-            public static string? ApplicationId { get; set; }
-            public static string? ApplicationSecret { get; set; }
-            public static string? TenantId { get; set; }
-            public static string? RefreshToken { get; set; }
+            internal static string? ApplicationId { get; set; }
+            internal static string? ApplicationSecret { get; set; }
+            internal static string? TenantId { get; set; }
+            internal static string? RefreshToken { get; set; }
         }
     }
 }

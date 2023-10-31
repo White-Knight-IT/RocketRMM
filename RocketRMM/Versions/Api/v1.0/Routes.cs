@@ -174,7 +174,7 @@ namespace RocketRMM.Api.v10
             return authUserProfile;
         }
 
-        internal static async Task<object> UpdateUserProfile(HttpContext context, UserProfile inputProfile, bool updatePhoto)
+        public static async Task<object> UpdateUserProfile(HttpContext context, UserProfile inputProfile, bool updatePhoto)
         {
             if (!CoreEnvironment.SimulateAuthenticated)
             {
@@ -251,9 +251,9 @@ namespace RocketRMM.Api.v10
         /// <summary>
         /// Defines a ClientPrincipal returned when /.auth/me is called
         /// </summary>
-        internal struct Auth
+        public struct Auth
         {
-            internal UserProfile clientPrincipal { get; set; }
+            public UserProfile clientPrincipal { get; set; }
         }
 
         /// <summary>

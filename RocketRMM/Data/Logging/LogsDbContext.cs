@@ -5,7 +5,7 @@ using RocketRMM.Common;
 
 namespace RocketRMM.Data.Logging
 {
-    internal class LogsDbContext : DbContext
+    public class LogsDbContext : DbContext
     {
         private DbSet<LogEntry>? _logEntries { get; set; }
 
@@ -14,12 +14,12 @@ namespace RocketRMM.Data.Logging
 
         }
 
-        internal async Task<List<LogEntry>> ListLogs()
+        public async Task<List<LogEntry>> ListLogs()
         {
             return await _logEntries.ToListAsync() ?? new();
         }
 
-        internal async Task<List<LogEntry>> Top10Logs()
+        public async Task<List<LogEntry>> Top10Logs()
         {
             return await _logEntries.OrderByDescending(x => x.Timestamp).Take(10).ToListAsync() ?? new();
         }
@@ -29,7 +29,7 @@ namespace RocketRMM.Data.Logging
         /// </summary>
         /// <param name="content">Content to write to console</param>
         /// <returns>bool which indicates successful write to console</returns>
-        internal static bool DebugConsoleWrite(string content)
+        public static bool DebugConsoleWrite(string content)
         {
             if (CoreEnvironment.IsDebug)
             {
@@ -40,7 +40,7 @@ namespace RocketRMM.Data.Logging
             return false;
         }
 
-        internal async Task<bool> AddLogEntry(LogEntry logEntry)
+        public async Task<bool> AddLogEntry(LogEntry logEntry)
         {
             try
             {
@@ -112,16 +112,16 @@ namespace RocketRMM.Data.Logging
             return false;
         }
 
-        // Tells EF that we want to use SQLServerExpress
+        // Tells EF that we want to use MySQL
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            string connectionString = $"Data Source={CoreEnvironment.DbServer},{CoreEnvironment.DbServerPort}; Initial Catalog={CoreEnvironment.Db}; User Id={CoreEnvironment.DbUser}; Password={CoreEnvironment.DbPassword}; TrustServerCertificate=true";
-            options.UseSqlServer(connectionString);
+            string connectionString = $"server={CoreEnvironment.DbServer};port={CoreEnvironment.DbServerPort};database={CoreEnvironment.Db};user={CoreEnvironment.DbUser};password={CoreEnvironment.DbPassword}";
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
         }
     }
 
     // Represents a LogEntry object as it exists in the Logs DB
-    internal class LogEntry
+    public class LogEntry
     {
         [Key] // Public key
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto Generate GUID for our PK
@@ -137,7 +137,7 @@ namespace RocketRMM.Data.Logging
     /// <summary>
     /// A class for accessing the LogsDbContext in a thread safe manner
     /// </summary>
-    internal static class LogsDbThreadSafeCoordinator
+    public static class LogsDbThreadSafeCoordinator
     {
         private static bool _locked = false;
 
@@ -163,7 +163,7 @@ namespace RocketRMM.Data.Logging
         /// </summary>
         /// <param name="log">Log to add to DB</param>
         /// <returns>bool indicating success</returns>
-        internal static async Task<bool> ThreadSafeAdd(LogEntry log)
+        public static async Task<bool> ThreadSafeAdd(LogEntry log)
         {
             WaitForUnlock();
 

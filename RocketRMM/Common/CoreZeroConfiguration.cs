@@ -2,25 +2,25 @@
 
 namespace RocketRMM.Common
 {
-    public class CoreZeroConfiguration
+    internal class CoreZeroConfiguration
     {
 
-        public string? TenantId { get; set; }
-        public string? ClientId { get; set; }
-        public string? Domain { get; set; }
-        public string? Instance { get; set; }
-        public string? Scopes { get; set; }
-        public string? AuthorizationUrl { get; set; }
-        public string? TokenUrl { get; set; }
-        public string? ApiScope { get; set; }
-        public string? OpenIdClientId { get; set; }
-        public string? CallbackPath { get; set; }
-        public string? AppPassword { get; set; }
-        public string? RefreshToken { get; set; }
-        public string? ExchangeRefreshToken { get; set; }
-        public bool? IsBootstrapped { get; set; }
+        internal string? TenantId { get; set; }
+        internal string? ClientId { get; set; }
+        internal string? Domain { get; set; }
+        internal string? Instance { get; set; }
+        internal string? Scopes { get; set; }
+        internal string? AuthorizationUrl { get; set; }
+        internal string? TokenUrl { get; set; }
+        internal string? ApiScope { get; set; }
+        internal string? OpenIdClientId { get; set; }
+        internal string? CallbackPath { get; set; }
+        internal string? AppPassword { get; set; }
+        internal string? RefreshToken { get; set; }
+        internal string? ExchangeRefreshToken { get; set; }
+        internal bool? IsBootstrapped { get; set; }
 
-        public static async Task<bool> Setup(string ownerTenant = "")
+        internal static async Task<bool> Setup(string ownerTenant = "")
         {
             // TenantId is GUID (CustomerId) and not domain
             if (!ownerTenant.Contains('.'))
@@ -108,7 +108,7 @@ const config = {{
             return false;
         }
 
-        public static bool ImportApiZeroConf(ref WebApplicationBuilder builder)
+        internal static bool ImportApiZeroConf(ref WebApplicationBuilder builder)
         {
             try
             {
@@ -147,7 +147,7 @@ const config = {{
             return false;
         }
 
-        public static async Task<CoreZeroConfiguration?> Read()
+        internal static async Task<CoreZeroConfiguration?> Read()
         {
             string apiZeroConfPath = $"{CoreEnvironment.PersistentDir}/api.zeroconf.aes";
 
@@ -159,7 +159,7 @@ const config = {{
             return null;
         }
 
-        public async Task<bool> Save()
+        internal async Task<bool> Save()
         {
             try
             {

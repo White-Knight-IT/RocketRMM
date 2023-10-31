@@ -6,7 +6,7 @@ using RocketRMM.Data.Logging;
 
 namespace RocketRMM.Data
 {
-    internal class UserProfilesDbContext : DbContext
+    public class UserProfilesDbContext : DbContext
     {
         private DbSet<UserProfile>? _userProfiles { get; set; }
 
@@ -118,15 +118,15 @@ namespace RocketRMM.Data
         // Tells EF that we want to use MySQL
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            string connectionString = $"Data Source={CoreEnvironment.DbServer},{CoreEnvironment.DbServerPort}; Initial Catalog={CoreEnvironment.Db}; User Id={CoreEnvironment.DbUser}; Password={CoreEnvironment.DbPassword}; TrustServerCertificate=true";
-            options.UseSqlServer(connectionString);
+            string connectionString = $"server={CoreEnvironment.DbServer};port={CoreEnvironment.DbServerPort};database={CoreEnvironment.Db};user={CoreEnvironment.DbUser};password={CoreEnvironment.DbPassword}";
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
         }
     }
 
     /// <summary>
     /// Represents a UserProfile object as it exists in the UserProfiles DB
     /// </summary>
-    internal class UserProfile
+    public class UserProfile
     {
         [Key] // Public key
         public Guid userId { get; set; }
@@ -142,7 +142,7 @@ namespace RocketRMM.Data
     /// <summary>
     /// A class for accessing the UserProfilesDbContext in a thread safe manner
     /// </summary>
-    internal static class UserProfilesDbThreadSafeCoordinator
+    public static class UserProfilesDbThreadSafeCoordinator
     {
         private static bool _locked = false;
 

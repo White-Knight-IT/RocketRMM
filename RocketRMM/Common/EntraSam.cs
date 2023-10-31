@@ -3,11 +3,11 @@ using System.Text.Json;
 
 namespace RocketRMM.Common
 {
-    public class EntraSam
+    internal class EntraSam
     {
-        public enum SamAppType { Api, Spa };
+        internal enum SamAppType { Api, Spa };
 
-        public static async Task<SamAndPassword> CreateSAMAuthApp(string appName, SamAppType appType, string domain, string swaggerUiAppId = "", string[]? spaRedirectUri = null, string scopeGuid = "")
+        internal static async Task<SamAndPassword> CreateSAMAuthApp(string appName, SamAppType appType, string domain, string swaggerUiAppId = "", string[]? spaRedirectUri = null, string scopeGuid = "")
         {
             dynamic samApp;
 
@@ -819,88 +819,88 @@ namespace RocketRMM.Common
             return new();
         }
 
-        public struct SamAndPassword
+        internal struct SamAndPassword
         {
-            public JsonElement EntraSam { get; set; }
-            public string? appPassword { get; set; }
+            internal JsonElement EntraSam { get; set; }
+            internal string? appPassword { get; set; }
         }
 
-        public struct ResourceAccess
+        internal struct ResourceAccess
         {
-            public Guid id { get; set; }
-            public string type { get; set; }
+            internal Guid id { get; set; }
+            internal string type { get; set; }
         }
 
-        public struct RequiredResourceAccess
+        internal struct RequiredResourceAccess
         {
-            public List<ResourceAccess> resourceAccess { get; set; }
-            public Guid resourceAppId { get; set; }
+            internal List<ResourceAccess> resourceAccess { get; set; }
+            internal Guid resourceAppId { get; set; }
         }
 
-        public struct Spa
+        internal struct Spa
         {
-            public string[]? redirectUris { get; set; }
+            internal string[]? redirectUris { get; set; }
         }
 
-        public struct ApiApplication
+        internal struct ApiApplication
         {
-            public bool? acceptMappedClaims { get; set; }
-            public List<string>? knownClientApplications { get; set; }
-            public List<PermissionScope>? oauth2PermissionScopes { get; set; }
-            public List<PreAuthorizedApplication>? preAuthorizedApplications { get; set; }
-            public int? requestedAccessTokenVersion { get; set; }
+            internal bool? acceptMappedClaims { get; set; }
+            internal List<string>? knownClientApplications { get; set; }
+            internal List<PermissionScope>? oauth2PermissionScopes { get; set; }
+            internal List<PreAuthorizedApplication>? preAuthorizedApplications { get; set; }
+            internal int? requestedAccessTokenVersion { get; set; }
         }
 
-        public struct PermissionScope
+        internal struct PermissionScope
         {
-            public string? id { get; set; }
-            public string? adminConsentDisplayName { get; set; }
-            public string? adminConsentDescription { get; set; }
-            public string? userConsentDisplayName { get; set; }
-            public string? userConsentDescription { get; set; }
-            public string? value { get; set; }
-            public string? type { get; set; }
-            public bool? isEnabled { get; set; }
+            internal string? id { get; set; }
+            internal string? adminConsentDisplayName { get; set; }
+            internal string? adminConsentDescription { get; set; }
+            internal string? userConsentDisplayName { get; set; }
+            internal string? userConsentDescription { get; set; }
+            internal string? value { get; set; }
+            internal string? type { get; set; }
+            internal bool? isEnabled { get; set; }
         }
 
-        public struct PreAuthorizedApplication
+        internal struct PreAuthorizedApplication
         {
-            public string? appId { get; set; }
-            public List<string>? delegatedPermissionIds { get; set; }
+            internal string? appId { get; set; }
+            internal List<string>? delegatedPermissionIds { get; set; }
         }
 
 
-        public struct AppRole
+        internal struct AppRole
         {
-            public List<string>? allowedMemberTypes { get; set; }
-            public string? description { get; set; }
-            public string? displayName { get; set; }
-            public string? id { get; set; }
-            public bool? isEnabled { get; set; }
-            public string? origin { get; set; }
-            public string? value { get; set; }
+            internal List<string>? allowedMemberTypes { get; set; }
+            internal string? description { get; set; }
+            internal string? displayName { get; set; }
+            internal string? id { get; set; }
+            internal bool? isEnabled { get; set; }
+            internal string? origin { get; set; }
+            internal string? value { get; set; }
         }
 
-        public struct Web
+        internal struct Web
         {
-            public List<string> redirectUris { get; set; }
-            public ImplicitGrantSettings implicitGrantSettings { get; set; }
+            internal List<string> redirectUris { get; set; }
+            internal ImplicitGrantSettings implicitGrantSettings { get; set; }
         }
 
-        public struct ImplicitGrantSettings
+        internal struct ImplicitGrantSettings
         {
-            public bool enableAccessTokenIssuance { get; set; }
-            public bool enableIdTokenIssuance { get; set; }
+            internal bool enableAccessTokenIssuance { get; set; }
+            internal bool enableIdTokenIssuance { get; set; }
         }
 
-        public struct PasswordCredential
+        internal struct PasswordCredential
         {
-            public string displayName { get; set; }
+            internal string displayName { get; set; }
         }
 
-        public struct AppId
+        internal struct AppId
         {
-            public string appId { get; set; }
+            internal string appId { get; set; }
         }
     }
 }

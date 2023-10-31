@@ -7,7 +7,7 @@ namespace RocketRMM.Common
 {
     internal class Utilities
     {
-        public static readonly List<string> WordDictionary = new() { "bruce","bruceson","john","johnson","big","small","stinky",
+        internal static readonly List<string> WordDictionary = new() { "bruce","bruceson","john","johnson","big","small","stinky",
             "outrageous","valuable","pineapples","jack","jackson","peter","file","juices","spruce","cactus","blunt","sharp","affluent",
             "camel","toe","elbow","knee","old","sponzengeiger","wallace","william","jane","doe","moe","didactic","barnacle","sponge",
             "bob","qwerty","nelson","full","extreme","upstart","fbi","nsa","noah","ark","lancelot","potty","mouth","underpants","spiky",
@@ -28,7 +28,7 @@ namespace RocketRMM.Common
             "devil","salamander","frog","carrots","onions","dude","aubergine","appendage","cloudy","scaled","measured","response","excited","flustered",
             "peacock","bin","garbage","trash","taco","beans","burger","alien","illegal","fragrant","floral","food","popsicle","ajar","test","sensual",
             "schooled","varnish","lazy","starfish","belly","ring","of","fire","ice","yacht","russian","spider","web","fierce","furious","fast","factual",
-            "fred","nerf","fern","leaf","good","bad","noodles","boy","girl","sleep","thin","major","minor","private","public","nuisance","coffee","fetish"
+            "fred","nerf","fern","leaf","good","bad","noodles","boy","girl","sleep","thin","major","minor","private","internal","nuisance","coffee","fetish"
         };
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace RocketRMM.Common
         /// </summary>
         /// <param name="length">Length of characters you want returned, defaults to 4098 (4kb)</param>
         /// <returns>4kb string of random bytes encoded as base64 string</returns>
-        public static async Task<string> RandomByteString(int length = 4098)
+        internal static async Task<string> RandomByteString(int length = 4098)
         {
             return await Base64Encode(RandomNumberGenerator.GetBytes(length));
         }
@@ -47,7 +47,7 @@ namespace RocketRMM.Common
         /// <typeparam name="type">Will parse into a list of objects of this type</typeparam>
         /// <param name="rawJson"></param>
         /// <returns>List of objects defined by given type</returns>
-        public static List<type> ParseJson<type>(List<JsonElement> rawJson)
+        internal static List<type> ParseJson<type>(List<JsonElement> rawJson)
         {
             List<type> objectArrayList = new();
 
@@ -71,7 +71,7 @@ namespace RocketRMM.Common
         /// <typeparam name="type">type of JSON object/s e.g. Tenant or List<Tenant></typeparam>
         /// <param name="json">JSON object/s to serialize to file</param>
         /// <param name="filePath">File path</param>
-        public static async void WriteJsonToFile<type>(object json, string filePath, bool encrypt = false, byte[]? key = null)
+        internal static async void WriteJsonToFile<type>(object json, string filePath, bool encrypt = false, byte[]? key = null)
         {
             string jsonString = JsonSerializer.Serialize((type)json);
 
@@ -89,7 +89,7 @@ namespace RocketRMM.Common
         /// <typeparam name="type">Type of our JSON object to make</typeparam>
         /// <param name="filePath">Path to our file containing JSON</param>
         /// <returns>JSON object of specified type</returns>
-        public static async Task<type> ReadJsonFromFile<type>(string filePath, bool decrypt = false, byte[]? key = null)
+        internal static async Task<type> ReadJsonFromFile<type>(string filePath, bool decrypt = false, byte[]? key = null)
         {
             string jsonString = File.ReadAllText(filePath);
 
@@ -108,7 +108,7 @@ namespace RocketRMM.Common
         /// <param name="csvFilePath">File path to the CSV file</param>
         /// <param name="skipHeader">First line is a header line (not data) so use true to skip it</param>
         /// <returns>List of objects, each object is a line from the CSV</returns>
-        public static List<type> CsvToObjectList<type>(string csvFilePath, bool skipHeader = false)
+        internal static List<type> CsvToObjectList<type>(string csvFilePath, bool skipHeader = false)
         {
             List<type> returnData = new();
 
@@ -132,7 +132,7 @@ namespace RocketRMM.Common
         /// </summary>
         /// <param name="property">JSON boolean to check</param>
         /// <returns>true/false</returns>
-        public static bool NullIsFalse(JsonElement property)
+        internal static bool NullIsFalse(JsonElement property)
         {
             try
             {
@@ -152,7 +152,7 @@ namespace RocketRMM.Common
         /// <param name="arg">string to convert to bytes</param>
         /// <returns>byte[] containing decoded bytes</returns>
         /// <exception cref="Exception">Illegal base64url string</exception>
-        public static byte[] Base64UrlDecode(string arg)
+        internal static byte[] Base64UrlDecode(string arg)
         {
             string s = arg;
             s = s.Replace('-', '+'); // 62nd char of encoding
@@ -174,7 +174,7 @@ namespace RocketRMM.Common
         /// </summary>
         /// <param name="bytes">bytes to encode</param>
         /// <returns>Base64 encoded string</returns>
-        public static async Task<string> Base64Encode(byte[] bytes)
+        internal static async Task<string> Base64Encode(byte[] bytes)
         {
             Task<string> task = new(() =>
             {
@@ -191,7 +191,7 @@ namespace RocketRMM.Common
         /// </summary>
         /// <param name="text"></param>
         /// <returns>byte array containing bytes of string</returns>
-        public static async Task<byte[]> Base64Decode(string text)
+        internal static async Task<byte[]> Base64Decode(string text)
         {
             Task<byte[]> task = new(() =>
             {
@@ -204,7 +204,7 @@ namespace RocketRMM.Common
             return await task;
         }
 
-        public static async Task<string> UsernameParse(HttpContext context)
+        internal static async Task<string> UsernameParse(HttpContext context)
         {
             try
             {
@@ -216,13 +216,13 @@ namespace RocketRMM.Common
             }
         }
 
-        public static class Crypto
+        internal static class Crypto
         {
             /// <summary>
             /// Used to describe an ApiRandom object used to coinstruct cryptorandom things
             /// used within the API
             /// </summary>
-            public class ApiRandom
+            internal class ApiRandom
             {
                 private readonly string _phrase;
                 private readonly string _hashedPhrase;
@@ -237,7 +237,7 @@ namespace RocketRMM.Common
                 /// <param name="phrase">The phrase we will be </param>
                 /// <param name="salt"></param>
                 /// <param name="iterations"></param>
-                public ApiRandom(string phrase, string salt = "mmmsosalty888", long iterations = 231010, bool ignoreCryptoSafe = false)
+                internal ApiRandom(string phrase, string salt = "mmmsosalty888", long iterations = 231010, bool ignoreCryptoSafe = false)
                 {
                     _ignoreCryptoSafe = ignoreCryptoSafe;
                     _iterations = iterations;
@@ -264,12 +264,12 @@ namespace RocketRMM.Common
                     return false;
                 }
 
-                public string Phrase { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return _phrase; } }
-                public string HashedPhrase { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return _hashedPhrase; } }
-                public byte[] HashedPhraseBytes { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return Convert.FromHexString(_hashedPhrase); } }
-                public string Salt { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return _salt; } }
-                public Guid HashedPhraseBytesAsGuid { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return new Guid(MD5.HashData(Convert.FromHexString(_hashedPhrase))); } }
-                public long Iterations { get => _iterations; }
+                internal string Phrase { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return _phrase; } }
+                internal string HashedPhrase { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return _hashedPhrase; } }
+                internal byte[] HashedPhraseBytes { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return Convert.FromHexString(_hashedPhrase); } }
+                internal string Salt { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return _salt; } }
+                internal Guid HashedPhraseBytesAsGuid { get { if (!CheckCryptoSafe()) { throw new("This ApiRandom is not Cryptosafe and we are not instructed to ignore Cryptosafety"); } return new Guid(MD5.HashData(Convert.FromHexString(_hashedPhrase))); } }
+                internal long Iterations { get => _iterations; }
             }
 
             /// <summary>
@@ -279,7 +279,7 @@ namespace RocketRMM.Common
             /// <param name="numberOfPhrases">Number of 2 word phrases to generate in the single line delimited by '-'</param>
             /// <param name="salt">Optional salt to be used during sha512 hashing operation</param>
             /// <returns>List where [0] contains word phrase, [1] contains hex encoded 100,000 pass sha512</returns>
-            public static ApiRandom Random2WordPhrase(int numberOfPhrases = 1, string salt = "mmmsalty888", long iterations = 231010, bool ignoreCryptoSafe = false)
+            internal static ApiRandom Random2WordPhrase(int numberOfPhrases = 1, string salt = "mmmsalty888", long iterations = 231010, bool ignoreCryptoSafe = false)
             {
                 int i = 0;
                 string phrase = string.Empty;
@@ -312,7 +312,7 @@ namespace RocketRMM.Common
             /// <param name="key">encryption key</param>
             /// <returns>string of encrypted text (cipherText)</returns>
             /// <exception cref="ArgumentException">Will throw if AES key not a correct size</exception>
-            public static async Task<string> AesEncrypt(string plainText, byte[]? key = null)
+            internal static async Task<string> AesEncrypt(string plainText, byte[]? key = null)
             {
                 if (key == null)
                 {
@@ -360,7 +360,7 @@ namespace RocketRMM.Common
             /// <param name="key">decryption key</param>
             /// <returns>decrypted text (plainText)</returns>
             /// <exception cref="ArgumentException">Will throw if AES key not a correct size</exception>
-            public static async Task<string> AesDecrypt(string cipherText, byte[]? key = null)
+            internal static async Task<string> AesDecrypt(string cipherText, byte[]? key = null)
             {
                 if (key == null)
                 {
