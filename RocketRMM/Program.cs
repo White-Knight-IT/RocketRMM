@@ -228,7 +228,7 @@ if (CoreEnvironment.RunSwagger)
 
             foreach (var desc in app.DescribeApiVersions())
             {
-                var url = $"{Path.DirectorySeparatorChar}swagger{Path.DirectorySeparatorChar}{desc.GroupName}{Path.DirectorySeparatorChar}swagger.json";
+                var url = $"/swagger/{desc.GroupName}/swagger.json";
                 var name = desc.GroupName.ToUpper();
                 if (desc.ApiVersion.ToString().Contains(CoreEnvironment.ApiDev.ToString()))
                 {
@@ -238,8 +238,8 @@ if (CoreEnvironment.RunSwagger)
                 customSwagger.SwaggerEndpoint(url, $"RocketRMM API {name}");
             }
 
-            customSwagger.InjectStylesheet($"{Path.DirectorySeparatorChar}swagger{Path.DirectorySeparatorChar}css{Path.DirectorySeparatorChar}swagger-customisation.css");
-            customSwagger.InjectJavascript($"{Path.DirectorySeparatorChar}swagger{Path.DirectorySeparatorChar}js{Path.DirectorySeparatorChar}swagger-customisation.js", "text/javascript");
+            customSwagger.InjectStylesheet($"/swagger/css/swagger-customisation.css");
+            customSwagger.InjectJavascript($"/swagger/js/swagger-customisation.js", "text/javascript");
             customSwagger.OAuthClientId(app.Configuration["ZeroConf:AzureAd:OpenIdClientId"]);
             customSwagger.OAuthUsePkce();
             customSwagger.OAuthScopeSeparator(" ");

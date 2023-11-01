@@ -343,7 +343,7 @@ namespace RocketRMM.Common
                         }
                     }
 
-                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(body)); 
+                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })); 
                     requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
                      HttpResponseMessage responseMessage = await SendHttpRequest(requestMessage);
