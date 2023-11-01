@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data.Logging;
 using RocketRMM.Data;
+using System.Text.Json.Serialization;
 
 namespace RocketRMM.Common
 {
@@ -25,19 +26,19 @@ namespace RocketRMM.Common
         internal static readonly string CoreVersion = "0.0.1:alpha";
         internal static readonly string WorkingDir = Directory.GetCurrentDirectory();
         internal static readonly string DataDir = $"{WorkingDir}{Path.DirectorySeparatorChar}Data";
-        internal static string CacheDir = $"{DataDir}{Path.DirectorySeparatorChar}Cache";
-        internal static string PersistentDir = ".";
-        internal static string WebRootPath = $"{WorkingDir}{Path.DirectorySeparatorChar}wwwroot";
+        internal static string? CacheDir;
+        internal static string? PersistentDir;
+        internal static string? WebRootPath;
         internal static readonly string ApiHeader = "Api";
         internal static readonly string ApiAccessScope = "rocketrmm-api.access";
         internal static readonly string FfppSimulatedAuthUsername = "RocketRMM Simulated Authentication";
-        internal static string RocketRmmFrontEndUri = "http://localhost";
-        internal static string Db = "rocketrmmdb";
-        internal static string DbUser = "sa";
-        internal static string DbPassword = "localdevroot!!!1";
-        internal static string DbServer = "localhost";
-        internal static string DbServerPort = "1433";
-        internal static List<double> ApiRouteVersions = new() { 1.0 };
+        internal static string? RocketRmmFrontEndUri;
+        internal static string? Db;
+        internal static string? DbUser;
+        internal static string? DbPassword;
+        internal static string? DbServer;
+        internal static string? DbServerPort;
+        internal static List<double> ApiRouteVersions = [1.0];
         internal static ApiVersionSet? ApiVersionSet { get; set; }
         internal static readonly ApiVersion ApiDev = new(1.1);
         internal static readonly ApiVersion ApiV10 = new(ApiRouteVersions[0]);
@@ -52,11 +53,11 @@ namespace RocketRMM.Common
         internal static bool ServeStaticFiles = false;
         internal static bool UseHttpsRedirect = true;
         internal static string? DeviceTag = string.Empty;
-        internal static string KestrelHttp = "https://localhost:7073";
-        internal static string KestrelHttps = "https://localhost:7074";
+        internal static string? KestrelHttp;
+        internal static string? KestrelHttps;
         internal static long RunErrorCount = 0;
         internal static bool IsBoostrapped = false;
-        internal static List<AccessToken> AccessTokenCache = new();
+        internal static List<AccessToken> AccessTokenCache = [];
         internal static readonly string DefaultSystemUsername = "HAL";
         /// <summary>
         /// Build data directories including cache directories if they don't exist
@@ -78,7 +79,7 @@ namespace RocketRMM.Common
         /// <returns>DeviceId as byte[32] array</returns>
         internal static async Task<byte[]> GetDeviceId()
         {
-            byte[] hmacSalt = UTF8Encoding.UTF8.GetBytes($"rocketRMMDevId{await GetDeviceIdTokenSeed()}seedBytes");
+            byte[] hmacSalt = Encoding.UTF8.GetBytes($"rocketRMMDevId{await GetDeviceIdTokenSeed()}seedBytes");
 
             try
             {
@@ -95,16 +96,16 @@ namespace RocketRMM.Common
             }
             catch (Exception ex)
             {
-                CoreEnvironment.RunErrorCount++;
+                RunErrorCount++;
 
-                LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
                     Message = $"Exception GetDeviceId: {ex.Message}",
                     Severity = "Error",
                     API = "GetDeviceId"
                 });
 
-                throw ex;
+                throw;
             }
         }
 
@@ -136,9 +137,9 @@ namespace RocketRMM.Common
 
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Didn't create DB tables, this is expected if they already exist - server: {CoreEnvironment.DbServer} - port: {CoreEnvironment.DbServerPort}");
+                Console.WriteLine($"Didn't create DB tables, this is expected if they already exist - server: {DbServer} - port: {DbServerPort}");
             }
 
             return false;
@@ -174,10 +175,10 @@ namespace RocketRMM.Common
                 {
                     Console.WriteLine($"Found bootstrap.json at {bootstrapPath}");
                     JsonElement result = await Utilities.ReadJsonFromFile<JsonElement>(bootstrapPath);
-                    CoreEnvironment.Secrets.TenantId = result.GetProperty("TenantId").GetString();
-                    CoreEnvironment.Secrets.ApplicationId = result.GetProperty("ApplicationId").GetString();
-                    CoreEnvironment.Secrets.ApplicationSecret = result.GetProperty("ApplicationSecret").GetString();
-                    await CoreZeroConfiguration.Setup(CoreEnvironment.Secrets.TenantId);
+                    Secrets.TenantId = result.GetProperty("TenantId").GetString();
+                    Secrets.ApplicationId = result.GetProperty("ApplicationId").GetString();
+                    Secrets.ApplicationSecret = result.GetProperty("ApplicationSecret").GetString();
+                    _ = await CoreZeroConfiguration.Setup(Secrets.TenantId);
                     return true;
                 }
             }
@@ -185,7 +186,7 @@ namespace RocketRMM.Common
             {
                 Console.WriteLine($"Failed to setup Azure AD EntraSam applications using bootstrap.json, exception: {ex.Message}");
                 Console.WriteLine("This is a fatal exception because the API cannot function without the needed EntraSam apps. Shutting API down...");
-                CoreEnvironment.ShutDownApi(1);
+                ShutDownApi(1);
             }
 
             return false;
@@ -197,7 +198,7 @@ namespace RocketRMM.Common
         /// <returns></returns>
         internal static async Task<string> GetDeviceTag()
         {
-            return (await CoreEnvironment.GetDeviceIdTokenSeed())[^6..];
+            return (await GetDeviceIdTokenSeed())[^6..];
         }
 
         // Gets the DeviceIdTokenSeed used as static entropy in DeviceId generation
@@ -216,16 +217,16 @@ namespace RocketRMM.Common
             }
             catch (Exception ex)
             {
-                CoreEnvironment.RunErrorCount++;
+                RunErrorCount++;
 
-                LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
                     Message = $"Exception GetDeviceIdToken: {ex.Message}",
                     Severity = "Error",
                     API = "GetDeviceIdTokenSeed"
                 });
 
-                throw ex;
+                throw;
             }
         }
 
@@ -233,24 +234,31 @@ namespace RocketRMM.Common
         {
             public ApiTokenStatus()
             {
-                refreshToken = false;
+                RefreshToken = false;
 
                 if (!string.IsNullOrEmpty(Secrets.RefreshToken))
                 {
-                    refreshToken = true;
+                    RefreshToken = true;
                 }
             }
 
-            internal bool refreshToken { get; set; }
+            [JsonInclude]
+            internal bool RefreshToken { get; set; }
         }
 
         internal struct AccessToken
         {
+            [JsonInclude]
             internal string AppId { get; set; }
+            [JsonInclude]
             internal bool AsApp { get; set; }
+            [JsonInclude]
             internal string TenantId { get; set; }
+            [JsonInclude]
             internal string Scope { get; set; }
+            [JsonInclude]
             internal string Token { get; set; }
+            [JsonInclude]
             internal long Expires { get; set; }
         }
 
@@ -259,9 +267,13 @@ namespace RocketRMM.Common
         /// </summary>
         internal static class Secrets
         {
+            [JsonInclude]
             internal static string? ApplicationId { get; set; }
+            [JsonInclude]
             internal static string? ApplicationSecret { get; set; }
+            [JsonInclude]
             internal static string? TenantId { get; set; }
+            [JsonInclude]
             internal static string? RefreshToken { get; set; }
         }
     }

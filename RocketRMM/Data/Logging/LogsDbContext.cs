@@ -85,7 +85,7 @@ namespace RocketRMM.Data.Logging
                         }
                         catch
                         {
-                            Thread.CurrentThread.Join(attempts * CoreEnvironment.DbBackoffMs); // Sleep a multiple of a 5th of a second each attempt
+                            _ = Thread.CurrentThread.Join(attempts * CoreEnvironment.DbBackoffMs); // Sleep a multiple of a 5th of a second each attempt
                             attempts++;
 
                             if (attempts > repeatOnFail)
@@ -149,10 +149,8 @@ namespace RocketRMM.Data.Logging
 
             Task<List<LogEntry>> getTop10 = new(() =>
             {
-                using (LogsDbContext logEntries = new())
-                {
-                    return logEntries.Top10Logs().Result;
-                }
+                using LogsDbContext logEntries = new();
+                return logEntries.Top10Logs().Result;
             });
 
             return await ExecuteQuery(getTop10);
@@ -173,10 +171,8 @@ namespace RocketRMM.Data.Logging
 
             Task<bool> addLog = new(() =>
             {
-                using (LogsDbContext logEntries = new())
-                {
-                    return logEntries.AddLogEntry(log).Result;
-                }
+                using LogsDbContext logEntries = new();
+                return logEntries.AddLogEntry(log).Result;
             });
 
             return await ExecuteQuery(addLog);
@@ -206,7 +202,7 @@ namespace RocketRMM.Data.Logging
         {
             while (_locked)
             {
-                Thread.CurrentThread.Join(CoreEnvironment.DbBackoffMs);
+                _ = Thread.CurrentThread.Join(CoreEnvironment.DbBackoffMs);
             }
         }
     }

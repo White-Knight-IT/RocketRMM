@@ -8,7 +8,7 @@ namespace RocketRMM.Common
 {
     internal class Utilities
     {
-        internal static readonly List<string> WordDictionary = new() { "bruce","bruceson","john","johnson","big","small","stinky",
+        internal static readonly List<string> WordDictionary = [ "bruce","bruceson","john","johnson","big","small","stinky",
             "outrageous","valuable","pineapples","jack","jackson","peter","file","juices","spruce","cactus","blunt","sharp","affluent",
             "camel","toe","elbow","knee","old","sponzengeiger","wallace","william","jane","doe","moe","didactic","barnacle","sponge",
             "bob","qwerty","nelson","full","extreme","upstart","fbi","nsa","noah","ark","lancelot","potty","mouth","underpants","spiky",
@@ -30,7 +30,7 @@ namespace RocketRMM.Common
             "peacock","bin","garbage","trash","taco","beans","burger","alien","illegal","fragrant","floral","food","popsicle","ajar","test","sensual",
             "schooled","varnish","lazy","starfish","belly","ring","of","fire","ice","yacht","russian","spider","web","fierce","furious","fast","factual",
             "fred","nerf","fern","leaf","good","bad","noodles","boy","girl","sleep","thin","major","minor","private","internal","nuisance","coffee","fetish"
-        };
+        ];
 
         /// <summary>
         /// Returns a base64 encoded string consisting of 4098 crypto random bytes (4kb), this is cryptosafe random
@@ -50,17 +50,11 @@ namespace RocketRMM.Common
         /// <returns>List of objects defined by given type</returns>
         internal static List<type> ParseJson<type>(List<JsonElement> rawJson)
         {
-            List<type> objectArrayList = new();
-
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                MaxDepth = 64
-            };
+            List<type> objectArrayList = [];
 
             foreach (JsonElement je in rawJson)
             {
-                objectArrayList.Add(JsonSerializer.Deserialize<type>(je, options));
+                objectArrayList.Add(JsonSerializer.Deserialize<type>(je, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true, MaxDepth = 64 }));
             }
 
             return objectArrayList;
@@ -218,7 +212,7 @@ namespace RocketRMM.Common
                 /// <param name="phrase">The phrase we will be </param>
                 /// <param name="salt"></param>
                 /// <param name="iterations"></param>
-                internal ApiRandom(string phrase, string salt = "mmmsosalty888", long iterations = 231010, bool ignoreCryptoSafe = false)
+                internal ApiRandom(string phrase, string salt = "mmmsosalty888", long iterations = 235017, bool ignoreCryptoSafe = false)
                 {
                     _ignoreCryptoSafe = ignoreCryptoSafe;
                     _iterations = iterations;
@@ -260,7 +254,7 @@ namespace RocketRMM.Common
             /// <param name="numberOfPhrases">Number of 2 word phrases to generate in the single line delimited by '-'</param>
             /// <param name="salt">Optional salt to be used during sha512 hashing operation</param>
             /// <returns>List where [0] contains word phrase, [1] contains hex encoded 100,000 pass sha512</returns>
-            internal static ApiRandom Random2WordPhrase(int numberOfPhrases = 1, string salt = "mmmsalty888", long iterations = 231010, bool ignoreCryptoSafe = false)
+            internal static ApiRandom Random2WordPhrase(int numberOfPhrases = 1, string salt = "mmmsosalty888", long iterations = 235017, bool ignoreCryptoSafe = false)
             {
                 int i = 0;
                 string phrase = string.Empty;
@@ -308,30 +302,26 @@ namespace RocketRMM.Common
 
                 var plainTextBuffer = Encoding.UTF8.GetBytes(plainText);
 
-                using (var aes = Aes.Create())
+                using var aes = Aes.Create();
+                aes.Key = key;
+
+                // It is acceptable to use MD5 here as it outputs 16 bytes, it's fast, and IV is not secret
+                aes.IV = MD5.HashData(await Base64Decode(await RandomByteString(512)));
+
+                using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+                using var resultStream = new MemoryStream();
+                using (var aesStream = new CryptoStream(resultStream, encryptor, CryptoStreamMode.Write))
+                using (var plainStream = new MemoryStream(plainTextBuffer))
                 {
-                    aes.Key = key;
-
-                    // It is acceptable to use MD5 here as it outputs 16 bytes, it's fast, and IV is not secret
-                    aes.IV = MD5.HashData(await Utilities.Base64Decode(await RandomByteString(512)));
-
-                    using (var encryptor = aes.CreateEncryptor(aes.Key, aes.IV))
-                    using (var resultStream = new MemoryStream())
-                    {
-                        using (var aesStream = new CryptoStream(resultStream, encryptor, CryptoStreamMode.Write))
-                        using (var plainStream = new MemoryStream(plainTextBuffer))
-                        {
-                            plainStream.CopyTo(aesStream);
-                        }
-
-                        var result = resultStream.ToArray();
-                        var combined = new byte[aes.IV.Length + result.Length];
-                        Array.ConstrainedCopy(aes.IV, 0, combined, 0, aes.IV.Length);
-                        Array.ConstrainedCopy(result, 0, combined, aes.IV.Length, result.Length);
-
-                        return await Base64Encode(combined);
-                    }
+                    plainStream.CopyTo(aesStream);
                 }
+
+                var result = resultStream.ToArray();
+                var combined = new byte[aes.IV.Length + result.Length];
+                Array.ConstrainedCopy(aes.IV, 0, combined, 0, aes.IV.Length);
+                Array.ConstrainedCopy(result, 0, combined, aes.IV.Length, result.Length);
+
+                return await Base64Encode(combined);
             }
 
             /// <summary>
@@ -343,10 +333,7 @@ namespace RocketRMM.Common
             /// <exception cref="ArgumentException">Will throw if AES key not a correct size</exception>
             internal static async Task<string> AesDecrypt(string cipherText, byte[]? key = null)
             {
-                if (key == null)
-                {
-                    key = await CoreEnvironment.GetDeviceId();
-                }
+                key ??= await CoreEnvironment.GetDeviceId();
 
                 if (key.Length != 16 && key.Length != 24 && key.Length != 32)
                 {
@@ -357,30 +344,26 @@ namespace RocketRMM.Common
                 var combined = await Base64Decode(cipherText);
                 var cipherTextBuffer = new byte[combined.Length];
 
-                using (var aes = Aes.Create())
+                using var aes = Aes.Create();
+                aes.Key = key;
+
+                var iv = new byte[16];
+                var ciphertext = new byte[cipherTextBuffer.Length - iv.Length];
+
+                Array.ConstrainedCopy(combined, 0, iv, 0, iv.Length);
+                Array.ConstrainedCopy(combined, iv.Length, ciphertext, 0, ciphertext.Length);
+
+                aes.IV = iv;
+
+                using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+                using var resultStream = new MemoryStream();
+                using (var aesStream = new CryptoStream(resultStream, decryptor, CryptoStreamMode.Write))
+                using (var plainStream = new MemoryStream(ciphertext))
                 {
-                    aes.Key = key;
-
-                    var iv = new byte[16];
-                    var ciphertext = new byte[cipherTextBuffer.Length - iv.Length];
-
-                    Array.ConstrainedCopy(combined, 0, iv, 0, iv.Length);
-                    Array.ConstrainedCopy(combined, iv.Length, ciphertext, 0, ciphertext.Length);
-
-                    aes.IV = iv;
-
-                    using (var decryptor = aes.CreateDecryptor(aes.Key, aes.IV))
-                    using (var resultStream = new MemoryStream())
-                    {
-                        using (var aesStream = new CryptoStream(resultStream, decryptor, CryptoStreamMode.Write))
-                        using (var plainStream = new MemoryStream(ciphertext))
-                        {
-                            plainStream.CopyTo(aesStream);
-                        }
-
-                        return Encoding.UTF8.GetString(resultStream.ToArray());
-                    }
+                    plainStream.CopyTo(aesStream);
                 }
+
+                return Encoding.UTF8.GetString(resultStream.ToArray());
             }
         }
     }

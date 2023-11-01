@@ -1,23 +1,37 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RocketRMM.Common
 {
     internal class CoreZeroConfiguration
     {
-
+        [JsonInclude]
         internal string? TenantId { get; set; }
+        [JsonInclude]
         internal string? ClientId { get; set; }
+        [JsonInclude]
         internal string? Domain { get; set; }
+        [JsonInclude]
         internal string? Instance { get; set; }
+        [JsonInclude]
         internal string? Scopes { get; set; }
+        [JsonInclude]
         internal string? AuthorizationUrl { get; set; }
+        [JsonInclude]
         internal string? TokenUrl { get; set; }
+        [JsonInclude]
         internal string? ApiScope { get; set; }
+        [JsonInclude]
         internal string? OpenIdClientId { get; set; }
+        [JsonInclude]
         internal string? CallbackPath { get; set; }
+        [JsonInclude]
         internal string? AppPassword { get; set; }
+        [JsonInclude]
         internal string? RefreshToken { get; set; }
+        [JsonInclude]
         internal string? ExchangeRefreshToken { get; set; }
+        [JsonInclude]
         internal bool? IsBootstrapped { get; set; }
 
         internal static async Task<bool> Setup(string ownerTenant = "")
@@ -41,7 +55,7 @@ namespace RocketRMM.Common
                 // step two - create EntraSam that will act as the authentication hub of the API
                 EntraSam.SamAndPassword result = await EntraSam.CreateSAMAuthApp($"RocketRMM API - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Api, domain, openIdClientId, scopeGuid: apiScopeGuid);
                 JsonElement samApi = result.EntraSam;
-                string? appPassword = result.appPassword;
+                string? appPassword = result.AppPassword;
                 string clientId = samApi.GetProperty("appId").GetString() ?? string.Empty;
                 string idUri = samApi.GetProperty("identifierUris").EnumerateArray().ToArray()[0].GetString() ?? string.Empty;
                 string apiScope = string.Format("{0}/{1}", idUri, CoreEnvironment.ApiAccessScope);
@@ -64,7 +78,7 @@ namespace RocketRMM.Common
 
                     };
 
-                    zeroConf.Save();
+                    _ = zeroConf.Save();
                     string bootstrapPath = $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}bootstrap.json";
                     await File.WriteAllTextAsync(bootstrapPath, await Utilities.RandomByteString());
                     File.Delete(bootstrapPath);
@@ -155,7 +169,7 @@ const config = {{
         {
             try
             {
-                Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true);
+                _ = Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true);
                 CoreEnvironment.Secrets.TenantId = this.TenantId;
                 CoreEnvironment.Secrets.ApplicationId = this.ClientId;
                 CoreEnvironment.Secrets.ApplicationSecret = this.AppPassword;

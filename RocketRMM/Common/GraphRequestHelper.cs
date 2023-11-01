@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using System.Web;
 using RocketRMM.Data.Logging;
+using System.Text.Json.Serialization;
 
 namespace RocketRMM.Common
 {
@@ -112,10 +113,10 @@ namespace RocketRMM.Common
                 CoreEnvironment.RunErrorCount++;
 
                 // Write to log an error that we didn't get HTTP 2XX
-                LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
-                    Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode.ToString()}",
-                    Severity = "Error",                   
+                    Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode}",
+                    Severity = "Error",
                     API = "GetGraphToken"
                 });
 
@@ -134,7 +135,7 @@ namespace RocketRMM.Common
         /// <returns>A List containing one or more JSON Elements</returns>
         internal static async Task<List<JsonElement>> NewGraphGetRequest(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, bool noPagination = false)
         {
-            List<JsonElement> data = new();
+            List<JsonElement> data = [];
             Dictionary<string, string> headers;
 
             headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
@@ -210,9 +211,9 @@ namespace RocketRMM.Common
                         {
                             CoreEnvironment.RunErrorCount++;
                             nextUrl = string.Empty;
-                            LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
-                                Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode.ToString()}. Uri: {uri}",
+                                Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode}. Uri: {uri}",
                                 Severity = "Error",
                                 API = "NewGraphGetRequest"
                             });
@@ -245,7 +246,7 @@ namespace RocketRMM.Common
         /// <returns>A byte[] representing content returned in the response</returns>
         internal static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "")
         {
-            List<byte> data = new();
+            List<byte> data = [];
             Dictionary<string, string> headers;
 
             headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
@@ -291,7 +292,7 @@ namespace RocketRMM.Common
                     {
                         CoreEnvironment.RunErrorCount++;
 
-                        LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                        _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                         {
                             Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode.ToString()}. Uri: {uri}",
                             Severity = "Error",
@@ -308,7 +309,7 @@ namespace RocketRMM.Common
                 throw;
             }
 
-            return data.ToArray();
+            return [.. data];
         }
 
         /// <summary>
@@ -370,9 +371,9 @@ namespace RocketRMM.Common
 
                     CoreEnvironment.RunErrorCount++;
 
-                    LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                     {
-                        Message = $"Incorrect HTTP status code.Expected 2XX got {responseMessage.StatusCode.ToString()}. Uri: {uri}",
+                        Message = $"Incorrect HTTP status code.Expected 2XX got {responseMessage.StatusCode}. Uri: {uri}",
                         Severity = "Error",
                         API = "NewGraphPostRequest"
                     });
@@ -411,18 +412,31 @@ namespace RocketRMM.Common
 
             }
 
+            [JsonInclude]
             internal string AppId { get; }
+            [JsonInclude]
             internal string AppName { get; }
+            [JsonInclude]
             internal string Audience { get; }
+            [JsonInclude]
             internal string AuthMethods { get; }
+            [JsonInclude]
             internal string IpAddress { get; }
+            [JsonInclude]
             internal string Name { get; }
+            [JsonInclude]
             internal string Roles { get; }
+            [JsonInclude]
             internal string ScopeString { get; }
+            [JsonInclude]
             internal string[] Scope { get; }
+            [JsonInclude]
             internal string TenantId { get; }
+            [JsonInclude]
             internal string UserPrincipalName { get; }
+            [JsonInclude]
             internal long Expires { get; }
+            [JsonInclude]
             internal string AccessToken { get; }
         }
 

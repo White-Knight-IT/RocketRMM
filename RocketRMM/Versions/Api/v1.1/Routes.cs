@@ -7,7 +7,7 @@ namespace RocketRMM.Api.v11
     /// </summary>
     public static class Routes
     {
-        private static readonly string[] _tags = new[] { "FFPP API DEV" };
+        private static readonly string[] _tags = ["RocketRMM API Dev"];
         private static string _versionHeader = "v1.1";
 
         public static void InitRoutes(ref WebApplication app)
@@ -32,7 +32,7 @@ namespace RocketRMM.Api.v11
         /// </summary>
         public struct CurrentApiRoute
         {
-            public string api { get => "v" + CoreEnvironment.ApiRouteVersions[^1].ToString("f1"); }
+            public readonly string Api { get => "v" + CoreEnvironment.ApiRouteVersions[^1].ToString("f1"); }
         }
     }
 }

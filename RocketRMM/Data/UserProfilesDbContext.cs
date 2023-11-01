@@ -21,7 +21,7 @@ namespace RocketRMM.Data
             {
                 try
                 {
-                    if (!ExistsById(user.userId).Result)
+                    if (!ExistsById(user.UserId).Result)
                     {
                         Add(user);
                         SaveChanges();
@@ -72,19 +72,19 @@ namespace RocketRMM.Data
         {
             try
             {
-                UserProfile? foundUser = await _userProfiles.FindAsync(userProfile.userId);
+                UserProfile? foundUser = await _userProfiles.FindAsync(userProfile.UserId);
 
                 if (foundUser != null)
                 {
                     if (updatePhoto)
                     {
-                        foundUser.photoData = userProfile.photoData;
+                        foundUser.PhotoData = userProfile.PhotoData;
                     }
 
-                    foundUser.name = userProfile.name;
-                    foundUser.identityProvider = userProfile.identityProvider;
-                    foundUser.theme = userProfile.theme;
-                    foundUser.userDetails = userProfile.userDetails;
+                    foundUser.Name = userProfile.Name;
+                    foundUser.IdentityProvider = userProfile.IdentityProvider;
+                    foundUser.Theme = userProfile.Theme;
+                    foundUser.UserDetails = userProfile.UserDetails;
                     SaveChanges();
 
                     return true;
@@ -94,9 +94,9 @@ namespace RocketRMM.Data
             {
                 CoreEnvironment.RunErrorCount++;
 
-                LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
-                    Message = $"Error updating user profile for {userProfile.userId.ToString()} - {userProfile.name}: {ex.Message}",
+                    Message = $"Error updating user profile for {userProfile.UserId.ToString()} - {userProfile.Name}: {ex.Message}",
                     Severity = "Error",
                     API = "UpdateUserProfile"
                 });
@@ -129,14 +129,14 @@ namespace RocketRMM.Data
     public class UserProfile
     {
         [Key] // Public key
-        public Guid userId { get; set; }
-        public string? identityProvider { get; set; }
-        public string? name { get; set; }
-        public string? userDetails { get; set; }
+        public Guid UserId { get; set; }
+        public string? IdentityProvider { get; set; }
+        public string? Name { get; set; }
+        public string? UserDetails { get; set; }
         [NotMapped] // We never save roles they may change and relying on old roles is security risk
-        public List<string>? userRoles { get; set; }
-        public string? theme { get; set; }
-        public string? photoData { get; set; }
+        public List<string>? UserRoles { get; set; }
+        public string? Theme { get; set; }
+        public string? PhotoData { get; set; }
     }
 
     /// <summary>
@@ -204,10 +204,8 @@ namespace RocketRMM.Data
 
             Task<bool> addUserProfile = new(() =>
             {
-                using (UserProfilesDbContext userProfiles = new())
-                {
-                    return userProfiles.AddUserProfile(userProfile).Result;
-                }
+                using UserProfilesDbContext userProfiles = new();
+                return userProfiles.AddUserProfile(userProfile).Result;
             });
 
             return await ExecuteQuery<bool>(addUserProfile);

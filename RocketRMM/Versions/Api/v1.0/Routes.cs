@@ -11,7 +11,7 @@ namespace RocketRMM.Api.v10
     /// </summary>
     public static class Routes
     {
-        private static readonly string[] _tags = new[] { "FFPP API" };
+        private static readonly string[] _tags = ["RocketRMM API"];
         private static readonly string _versionHeader = "v1.0";
 
         public static void InitRoutes(ref WebApplication app)
@@ -122,7 +122,7 @@ namespace RocketRMM.Api.v10
 
             Task<Auth> task = new(() =>
             {
-                List<string> roles = new();
+                List<string> roles = [];
 
                 // I think we can only have one role but I'll iterate just in case it happens
                 foreach (Claim c in context.User.Claims.Where(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")).ToList())
@@ -133,13 +133,13 @@ namespace RocketRMM.Api.v10
                 {
                     return new Auth()
                     {
-                        clientPrincipal = new()
+                        ClientPrincipal = new()
                         {
-                            userId = Guid.Parse(context.User.Claims.First(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/identity/claims/objectidentifier")).Value),
-                            identityProvider = "aad",
-                            name = context.User.Claims.First(x => x.Type.ToLower().Equals("name")).Value,
-                            userDetails = context.User.Claims.First(x => x.Type.ToLower().Equals("preferred_username")).Value,
-                            userRoles = roles
+                            UserId = Guid.Parse(context.User.Claims.First(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/identity/claims/objectidentifier")).Value),
+                            IdentityProvider = "aad",
+                            Name = context.User.Claims.First(x => x.Type.ToLower().Equals("name")).Value,
+                            UserDetails = context.User.Claims.First(x => x.Type.ToLower().Equals("preferred_username")).Value,
+                            UserRoles = roles
                         }
                     };
                 }
@@ -154,23 +154,23 @@ namespace RocketRMM.Api.v10
 
             Auth authUserProfile = await task;
 
-            authUserProfile.clientPrincipal.photoData = await User.GetUserPhoto(authUserProfile.clientPrincipal.userId.ToString(), UserPhotoSize.Small, context.User.Claims.First(x => x.Type.ToLower().Contains("tenantid")).Value);
+            authUserProfile.ClientPrincipal.PhotoData = await User.GetUserPhoto(authUserProfile.ClientPrincipal.UserId.ToString(), UserPhotoSize.Small, context.User.Claims.First(x => x.Type.ToLower().Contains("tenantid")).Value);
 
             // Check if profile exists, update and use if it does, create and use if it doesn't
 
-            UserProfile? userDbProfile = await UserProfilesDbThreadSafeCoordinator.ThreadSafeGetUserProfile(authUserProfile.clientPrincipal.userId);
+            UserProfile? userDbProfile = await UserProfilesDbThreadSafeCoordinator.ThreadSafeGetUserProfile(authUserProfile.ClientPrincipal.UserId);
 
             // User has no profile so we will create it
             if (userDbProfile == null)
             {
-                authUserProfile.clientPrincipal.theme = "dark";
-                UserProfilesDbThreadSafeCoordinator.ThreadSafeAdd(authUserProfile.clientPrincipal);
+                authUserProfile.ClientPrincipal.Theme = "dark";
+                UserProfilesDbThreadSafeCoordinator.ThreadSafeAdd(authUserProfile.ClientPrincipal);
                 return authUserProfile;
             }
 
             // User exists in the DB yay let us use it
-            authUserProfile.clientPrincipal.theme = userDbProfile.theme;
-            UserProfilesDbThreadSafeCoordinator.ThreadSafeAdd(authUserProfile.clientPrincipal);
+            authUserProfile.ClientPrincipal.Theme = userDbProfile.Theme;
+            UserProfilesDbThreadSafeCoordinator.ThreadSafeAdd(authUserProfile.ClientPrincipal);
             return authUserProfile;
         }
 
@@ -182,14 +182,14 @@ namespace RocketRMM.Api.v10
             }
 
             // Make sure that the users auth token matches the user who's profile they are trying to update
-            if (Guid.Parse(context.User.Claims.First(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/identity/claims/objectidentifier")).Value) != inputProfile.userId)
+            if (Guid.Parse(context.User.Claims.First(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/identity/claims/objectidentifier")).Value) != inputProfile.UserId)
             {
                 throw new UnauthorizedAccessException();
             }
 
             try
             {
-                List<string> roles = new();
+                List<string> roles = [];
 
                 // I think we can only have one role but I'll iterate just in case it happens
                 foreach (Claim c in context.User.Claims.Where(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")).ToList())
@@ -197,12 +197,12 @@ namespace RocketRMM.Api.v10
                     roles.Add(c.Value);
                 }
 
-                inputProfile.identityProvider = "aad";
-                inputProfile.name = context.User.Claims.First(x => x.Type.ToLower().Equals("name")).Value;
-                inputProfile.userDetails = context.User.Claims.First(x => x.Type.ToLower().Equals("preferred_username")).Value;
-                inputProfile.userRoles = roles;
+                inputProfile.IdentityProvider = "aad";
+                inputProfile.Name = context.User.Claims.First(x => x.Type.ToLower().Equals("name")).Value;
+                inputProfile.UserDetails = context.User.Claims.First(x => x.Type.ToLower().Equals("preferred_username")).Value;
+                inputProfile.UserRoles = roles;
                 // We apply sensible defaults below if we are given null for values
-                inputProfile.theme ??= "dark";
+                inputProfile.Theme ??= "dark";
 
                 await UserProfilesDbThreadSafeCoordinator.ThreadSafeUpdateUserProfile(inputProfile, updatePhoto);
 
@@ -218,32 +218,32 @@ namespace RocketRMM.Api.v10
 
         private static void CheckUserIsReader(HttpContext context)
         {
-            string[] scopes = { CoreEnvironment.ApiAccessScope };
-            string[] roles = { "owner", "admin", "tech", "reader" };
+            string[] scopes = [CoreEnvironment.ApiAccessScope];
+            string[] roles = ["owner", "admin", "tech", "reader"];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
 
         private static void CheckUserIsTech(HttpContext context)
         {
-            string[] scopes = { CoreEnvironment.ApiAccessScope };
-            string[] roles = { "owner", "admin", "tech" };
+            string[] scopes = [CoreEnvironment.ApiAccessScope];
+            string[] roles = ["owner", "admin", "tech"];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
 
         private static void CheckUserIsAdmin(HttpContext context)
         {
-            string[] scopes = { CoreEnvironment.ApiAccessScope };
-            string[] roles = { "owner", "admin" };
+            string[] scopes = [CoreEnvironment.ApiAccessScope];
+            string[] roles = ["owner", "admin"];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
 
         private static void CheckUserIsOwner(HttpContext context)
         {
-            string[] scopes = { CoreEnvironment.ApiAccessScope };
-            string[] roles = { "owner" };
+            string[] scopes = [CoreEnvironment.ApiAccessScope];
+            string[] roles = ["owner"];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
@@ -253,7 +253,7 @@ namespace RocketRMM.Api.v10
         /// </summary>
         public struct Auth
         {
-            public UserProfile clientPrincipal { get; set; }
+            public UserProfile ClientPrincipal { get; set; }
         }
 
         /// <summary>
@@ -261,9 +261,9 @@ namespace RocketRMM.Api.v10
         /// </summary>
         public struct Heartbeat
         {
-            public DateTime started { get => CoreEnvironment.Started; }
-            public long errorsSinceStarted { get => CoreEnvironment.RunErrorCount; }
-            public bool? isBootstrapped { get => CoreEnvironment.IsBoostrapped; }
+            public readonly DateTime Started { get => CoreEnvironment.Started; }
+            public readonly long ErrorsSinceStarted { get => CoreEnvironment.RunErrorCount; }
+            public readonly bool? IsBootstrapped { get => CoreEnvironment.IsBoostrapped; }
         }
 
         /// <summary>
@@ -271,7 +271,7 @@ namespace RocketRMM.Api.v10
         /// </summary>
         public struct CurrentApiRoute
         {
-            public string api { get => "v" + CoreEnvironment.ApiRouteVersions[^1].ToString("f1"); }
+            public readonly string Api { get => "v" + CoreEnvironment.ApiRouteVersions[^1].ToString("f1"); }
         }
 
         /// <summary>
@@ -279,8 +279,8 @@ namespace RocketRMM.Api.v10
         /// </summary>
         public struct ErrorResponseBody
         {
-            public int errorCode { get; set; }
-            public string message { get; set; }
+            public int ErrorCode { get; set; }
+            public string Message { get; set; }
         }
     }
 }

@@ -32,7 +32,7 @@ namespace RocketRMM.Api.Bootstrap
                 {
                     Task<GraphTokenUrl> getUrl = new(() =>
                     {
-                        return new() { url = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id={CoreEnvironment.Secrets.ApplicationId}&redirect_uri={CoreEnvironment.RocketRmmFrontEndUri}/bootstrap/receivegraphtoken" };
+                        return new() { Url = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id={CoreEnvironment.Secrets.ApplicationId}&redirect_uri={CoreEnvironment.RocketRmmFrontEndUri}/bootstrap/receivegraphtoken" };
                     });
 
                     getUrl.Start();
@@ -49,7 +49,7 @@ namespace RocketRMM.Api.Bootstrap
             /// <summary>
             /// /bootstrap/ReceiveGraphToken
             /// </summary>
-            app.MapGet("/bootstrap/ReceiveGraphToken", async (HttpContext context, HttpRequest request, string code) =>
+            _ = app.MapGet("/bootstrap/ReceiveGraphToken", async (HttpContext context, HttpRequest request, string code) =>
             {
                 if (!CoreEnvironment.IsBoostrapped)
                 {
@@ -65,7 +65,7 @@ namespace RocketRMM.Api.Bootstrap
                         string responseRawString = await responseMessage.Content.ReadAsStringAsync();
                         string[] headersRaw = responseRawString[1..^1].Split(",");
 
-                        Dictionary<string, string> headers = new();
+                        Dictionary<string, string> headers = [];
 
                         foreach (string headerPairRaw in headersRaw)
                         {
@@ -88,7 +88,7 @@ namespace RocketRMM.Api.Bootstrap
                         CoreEnvironment.Secrets.RefreshToken = headers["refresh_token"];
                         CoreZeroConfiguration zeroConf = await CoreZeroConfiguration.Read();
                         zeroConf.RefreshToken = CoreEnvironment.Secrets.RefreshToken;
-                        zeroConf.Save();
+                        _ = zeroConf.Save();
                         //redirect to success page
                         context.Response.Redirect($"{CoreEnvironment.RocketRmmFrontEndUri}/setup/graphtoken/success");
                     }
@@ -108,7 +108,7 @@ namespace RocketRMM.Api.Bootstrap
 
         public struct GraphTokenUrl
         {
-            public string url { get; set; }
+            public string Url { get; set; }
         }
     }
 }
