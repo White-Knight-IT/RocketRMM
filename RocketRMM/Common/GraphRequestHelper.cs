@@ -342,10 +342,10 @@ namespace RocketRMM.Common
                         }
                     }
 
-                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(body));
+                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(body)); 
                     requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-                    HttpResponseMessage responseMessage = await SendHttpRequest(requestMessage);
+                     HttpResponseMessage responseMessage = await SendHttpRequest(requestMessage);
 
                     if (responseMessage.IsSuccessStatusCode)
                     {

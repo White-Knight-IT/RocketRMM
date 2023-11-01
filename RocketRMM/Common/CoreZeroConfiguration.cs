@@ -22,14 +22,6 @@ namespace RocketRMM.Common
 
         internal static async Task<bool> Setup(string ownerTenant = "")
         {
-            // TenantId is GUID (CustomerId) and not domain
-            if (!ownerTenant.Contains('.'))
-            {
-                string uri = "https://graph.microsoft.com/v1.0/organization?$select=id";
-                List<JsonElement> organisation = await GraphRequestHelper.NewGraphGetRequest(uri, CoreEnvironment.Secrets.TenantId);
-                ownerTenant = organisation[0].GetProperty("id").GetString();
-            }
-
             string domain = ownerTenant;
             string scopes = CoreEnvironment.ApiAccessScope;
             string authorizationUrl = string.Format("https://login.microsoftonline.com/{0}/oauth2/v2.0/authorize", ownerTenant);
@@ -73,12 +65,12 @@ namespace RocketRMM.Common
                     };
 
                     zeroConf.Save();
-                    string bootstrapPath = $"{CoreEnvironment.PersistentDir}/bootstrap.json";
+                    string bootstrapPath = $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}bootstrap.json";
                     await File.WriteAllTextAsync(bootstrapPath, await Utilities.RandomByteString());
                     File.Delete(bootstrapPath);
 
                     // Setup our front end config file
-                    await File.WriteAllTextAsync($"{CoreEnvironment.WebRootPath}/config.js", $@"/* Don't put secret configuration settings in this file, this is rendered
+                    await File.WriteAllTextAsync($"{CoreEnvironment.WebRootPath}{Path.DirectorySeparatorChar}config.js", $@"/* Don't put secret configuration settings in this file, this is rendered
 by the client. */
 
 const config = {{
@@ -149,7 +141,7 @@ const config = {{
 
         internal static async Task<CoreZeroConfiguration?> Read()
         {
-            string apiZeroConfPath = $"{CoreEnvironment.PersistentDir}/api.zeroconf.aes";
+            string apiZeroConfPath = $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes";
 
             if (File.Exists(apiZeroConfPath))
             {
@@ -163,7 +155,7 @@ const config = {{
         {
             try
             {
-                Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}/api.zeroconf.aes", true);
+                Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true);
                 CoreEnvironment.Secrets.TenantId = this.TenantId;
                 CoreEnvironment.Secrets.ApplicationId = this.ClientId;
                 CoreEnvironment.Secrets.ApplicationSecret = this.AppPassword;

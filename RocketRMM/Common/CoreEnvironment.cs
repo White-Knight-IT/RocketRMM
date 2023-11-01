@@ -24,10 +24,10 @@ namespace RocketRMM.Common
 #endif
         internal static readonly string CoreVersion = "0.0.1:alpha";
         internal static readonly string WorkingDir = Directory.GetCurrentDirectory();
-        internal static readonly string DataDir = $"{WorkingDir}/Data";
-        internal static string CacheDir = $"{DataDir}/Cache";
+        internal static readonly string DataDir = $"{WorkingDir}{Path.DirectorySeparatorChar}Data";
+        internal static string CacheDir = $"{DataDir}{Path.DirectorySeparatorChar}Cache";
         internal static string PersistentDir = ".";
-        internal static string WebRootPath = $"{WorkingDir}/wwwroot";
+        internal static string WebRootPath = $"{WorkingDir}{Path.DirectorySeparatorChar}wwwroot";
         internal static readonly string ApiHeader = "Api";
         internal static readonly string ApiAccessScope = "rocketrmm-api.access";
         internal static readonly string FfppSimulatedAuthUsername = "RocketRMM Simulated Authentication";
@@ -77,14 +77,14 @@ namespace RocketRMM.Common
         /// <returns>DeviceId as byte[32] array</returns>
         internal static async Task<byte[]> GetDeviceId()
         {
-            byte[] hmacSalt = UTF8Encoding.UTF8.GetBytes($"ffppDevId{await GetDeviceIdTokenSeed()}seedBytes");
+            byte[] hmacSalt = UTF8Encoding.UTF8.GetBytes($"rocketRMMDevId{await GetDeviceIdTokenSeed()}seedBytes");
 
             try
             {
                 byte[] hashyBytes = HMACSHA512.HashData(hmacSalt, await GetEntropyBytes());
 
-                // key strech the device id using 173028 HMACSHA512 iterations
-                for (int i = 0; i < 173028; i++)
+                // key strech the device id using 183029 HMACSHA512 iterations
+                for (int i = 0; i < 183029; i++)
                 {
                     hashyBytes = HMACSHA512.HashData(hmacSalt, hashyBytes);
                 }
@@ -149,7 +149,7 @@ namespace RocketRMM.Common
         /// <returns></returns>
         internal static async Task<byte[]> GetEntropyBytes()
         {
-            string entropyBytesPath = $"{PersistentDir}/unique.entropy.bytes";
+            string entropyBytesPath = $"{PersistentDir}{Path.DirectorySeparatorChar}unique.entropy.bytes";
             if (!File.Exists(entropyBytesPath))
             {
                 await File.WriteAllTextAsync(entropyBytesPath, await Utilities.RandomByteString());
@@ -164,7 +164,7 @@ namespace RocketRMM.Common
         /// <returns></returns>
         internal static async Task<bool> CheckForBootstrap()
         {
-            string bootstrapPath = $"{PersistentDir}/bootstrap.json";
+            string bootstrapPath = $"{PersistentDir}{Path.DirectorySeparatorChar}bootstrap.json";
             try
             {
 
@@ -204,7 +204,7 @@ namespace RocketRMM.Common
         {
             try
             {
-                string deviceTokenPath = $"{PersistentDir}/device.id.token";
+                string deviceTokenPath = $"{PersistentDir}{Path.DirectorySeparatorChar}device.id.token";
 
                 if (!File.Exists(deviceTokenPath))
                 {

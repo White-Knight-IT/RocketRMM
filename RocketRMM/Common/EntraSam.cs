@@ -5,7 +5,7 @@ namespace RocketRMM.Common
 {
     internal class EntraSam
     {
-        internal enum SamAppType { Api, Spa };
+        public enum SamAppType { Api, Spa };
 
         internal static async Task<SamAndPassword> CreateSAMAuthApp(string appName, SamAppType appType, string domain, string swaggerUiAppId = "", string[]? spaRedirectUri = null, string scopeGuid = "")
         {
@@ -769,15 +769,15 @@ namespace RocketRMM.Common
                     };
                     samApp.signInAudience = "AzureADMultipleOrgs";
                     samApp.isFallbackPublicClient = true;
-                    string ffppFrontEnd = CoreEnvironment.RocketRmmFrontEndUri.TrimEnd('/');
+                    string rocketRmmFrontEnd = CoreEnvironment.RocketRmmFrontEndUri.TrimEnd('/');
                     samApp.web = new Web()
                     {
                         redirectUris = new()
                         {
                             $"{CoreEnvironment.KestrelHttp}",
                             $"{CoreEnvironment.KestrelHttps}",
-                            ffppFrontEnd,
-                            $"{ffppFrontEnd}/bootstrap/receivegraphtoken",
+                            rocketRmmFrontEnd,
+                            $"{rocketRmmFrontEnd}/bootstrap/receivegraphtoken",
                             $"{CoreEnvironment.KestrelHttp}/bootstrap/receivegraphtoken",
                             $"{CoreEnvironment.KestrelHttps}/bootstrap/receivegraphtoken",
                             "https://login.microsoftonline.com/common/oauth2/nativeclient",
@@ -806,7 +806,8 @@ namespace RocketRMM.Common
                     samApp = new ExpandoObject();
                     samApp.displayName = appName;
                     samApp.signInAudience = "AzureADMyOrg";
-                    samApp.requiredResourceAccess = new List<RequiredResourceAccess>() { new RequiredResourceAccess() { resourceAccess = new List<ResourceAccess>() { new() { id = new Guid("e1fe6dd8ba314d6189e788639da4683d"), type = "Scope" } }, resourceAppId = new Guid("0000000300000000c000000000000000") } };
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    samApp.requiredResourceAccess = new List<RequiredResourceAccess>() { new RequiredResourceAccess() { resourceAccess = new List<ResourceAccess>() { new() { id = new Guid("e1fe6dd8ba314d6189e788639da4683d"), type = "Scope" } }, resourceAppId = new Guid("0000000300000000c000000000000000") }};
 
                     if (spaRedirectUri != null)
                     {
@@ -819,88 +820,88 @@ namespace RocketRMM.Common
             return new();
         }
 
-        internal struct SamAndPassword
+        public struct SamAndPassword
         {
-            internal JsonElement EntraSam { get; set; }
-            internal string? appPassword { get; set; }
+            public JsonElement EntraSam { get; set; }
+            public string? appPassword { get; set; }
         }
 
-        internal struct ResourceAccess
+        public struct ResourceAccess
         {
-            internal Guid id { get; set; }
-            internal string type { get; set; }
+            public Guid id { get; set; }
+            public string type { get; set; }
         }
 
-        internal struct RequiredResourceAccess
+        public struct RequiredResourceAccess
         {
-            internal List<ResourceAccess> resourceAccess { get; set; }
-            internal Guid resourceAppId { get; set; }
+            public List<ResourceAccess> resourceAccess { get; set; }
+            public Guid resourceAppId { get; set; }
         }
 
-        internal struct Spa
+        public struct Spa
         {
-            internal string[]? redirectUris { get; set; }
+            public string[]? redirectUris { get; set; }
         }
 
-        internal struct ApiApplication
+        public struct ApiApplication
         {
-            internal bool? acceptMappedClaims { get; set; }
-            internal List<string>? knownClientApplications { get; set; }
-            internal List<PermissionScope>? oauth2PermissionScopes { get; set; }
-            internal List<PreAuthorizedApplication>? preAuthorizedApplications { get; set; }
-            internal int? requestedAccessTokenVersion { get; set; }
+            public bool? acceptMappedClaims { get; set; }
+            public List<string>? knownClientApplications { get; set; }
+            public List<PermissionScope>? oauth2PermissionScopes { get; set; }
+            public List<PreAuthorizedApplication>? preAuthorizedApplications { get; set; }
+            public int? requestedAccessTokenVersion { get; set; }
         }
 
-        internal struct PermissionScope
+        public struct PermissionScope
         {
-            internal string? id { get; set; }
-            internal string? adminConsentDisplayName { get; set; }
-            internal string? adminConsentDescription { get; set; }
-            internal string? userConsentDisplayName { get; set; }
-            internal string? userConsentDescription { get; set; }
-            internal string? value { get; set; }
-            internal string? type { get; set; }
-            internal bool? isEnabled { get; set; }
+            public string? id { get; set; }
+            public string? adminConsentDisplayName { get; set; }
+            public string? adminConsentDescription { get; set; }
+            public string? userConsentDisplayName { get; set; }
+            public string? userConsentDescription { get; set; }
+            public string? value { get; set; }
+            public string? type { get; set; }
+            public bool? isEnabled { get; set; }
         }
 
-        internal struct PreAuthorizedApplication
+        public struct PreAuthorizedApplication
         {
-            internal string? appId { get; set; }
-            internal List<string>? delegatedPermissionIds { get; set; }
+            public string? appId { get; set; }
+            public List<string>? delegatedPermissionIds { get; set; }
         }
 
 
-        internal struct AppRole
+        public struct AppRole
         {
-            internal List<string>? allowedMemberTypes { get; set; }
-            internal string? description { get; set; }
-            internal string? displayName { get; set; }
-            internal string? id { get; set; }
-            internal bool? isEnabled { get; set; }
-            internal string? origin { get; set; }
-            internal string? value { get; set; }
+            public List<string>? allowedMemberTypes { get; set; }
+            public string? description { get; set; }
+            public string? displayName { get; set; }
+            public string? id { get; set; }
+            public bool? isEnabled { get; set; }
+            public string? origin { get; set; }
+            public string? value { get; set; }
         }
 
-        internal struct Web
+        public struct Web
         {
-            internal List<string> redirectUris { get; set; }
-            internal ImplicitGrantSettings implicitGrantSettings { get; set; }
+            public List<string> redirectUris { get; set; }
+            public ImplicitGrantSettings implicitGrantSettings { get; set; }
         }
 
-        internal struct ImplicitGrantSettings
+        public struct ImplicitGrantSettings
         {
-            internal bool enableAccessTokenIssuance { get; set; }
-            internal bool enableIdTokenIssuance { get; set; }
+            public bool enableAccessTokenIssuance { get; set; }
+            public bool enableIdTokenIssuance { get; set; }
         }
 
-        internal struct PasswordCredential
+        public struct PasswordCredential
         {
-            internal string displayName { get; set; }
+            public string displayName { get; set; }
         }
 
-        internal struct AppId
+        public struct AppId
         {
-            internal string appId { get; set; }
+            public string appId { get; set; }
         }
     }
 }

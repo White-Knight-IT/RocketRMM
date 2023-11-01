@@ -1,4 +1,5 @@
-﻿using RocketRMM.Data.Logging;
+﻿using Microsoft.IdentityModel.Tokens;
+using RocketRMM.Data.Logging;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -70,8 +71,9 @@ namespace RocketRMM.Common
         /// </summary>
         /// <typeparam name="type">type of JSON object/s e.g. Tenant or List<Tenant></typeparam>
         /// <param name="json">JSON object/s to serialize to file</param>
-        /// <param name="filePath">File path</param>
-        internal static async void WriteJsonToFile<type>(object json, string filePath, bool encrypt = false, byte[]? key = null)
+        /// <param name="filePath">File path, use "" to avoid writing to file and just get the string</param>
+        ///<returns>The string that was written to file</returns>
+        internal static async Task<string> WriteJsonToFile<type>(object json, string filePath, bool encrypt = false, byte[]? key = null)
         {
             string jsonString = JsonSerializer.Serialize((type)json);
 
@@ -80,7 +82,12 @@ namespace RocketRMM.Common
                 jsonString = await Utilities.Crypto.AesEncrypt(jsonString, key);
             }
 
-            File.WriteAllText(filePath, jsonString);
+            if (!filePath.IsNullOrEmpty())
+            {
+                File.WriteAllText(filePath, jsonString);
+            }
+
+            return jsonString;
         }
 
         /// <summary>
@@ -99,32 +106,6 @@ namespace RocketRMM.Common
             }
 
             return JsonSerializer.Deserialize<type>(jsonString);
-        }
-
-        /// <summary>
-        /// Converts a supplied CSV file into a List of specified objects
-        /// </summary>
-        /// <typeparam name="type">type of the object we want returned in the list</typeparam>
-        /// <param name="csvFilePath">File path to the CSV file</param>
-        /// <param name="skipHeader">First line is a header line (not data) so use true to skip it</param>
-        /// <returns>List of objects, each object is a line from the CSV</returns>
-        internal static List<type> CsvToObjectList<type>(string csvFilePath, bool skipHeader = false)
-        {
-            List<type> returnData = new();
-
-            foreach (string line in File.ReadAllLines(csvFilePath))
-            {
-                // Skip first row (header row)
-                if (skipHeader)
-                {
-                    skipHeader = false;
-                    continue;
-                }
-
-                returnData.Add((type)Activator.CreateInstance(typeof(type), line.Split(',')));
-            }
-
-            return returnData;
         }
 
         /// <summary>
