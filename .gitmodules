@@ -1,0 +1,3 @@
+[submodule "RocketRMM/wwwroot"]
+	path = RocketRMM/wwwroot
+	url = git@github.com:White-Knight-IT/RocketRMM-WWW.git
