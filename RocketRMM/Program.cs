@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data;
 using Microsoft.Extensions.DependencyInjection;
 using System.Drawing.Text;
+using System.Text.Json;
 
 Console.WriteLine($@"                                                                    /\
  _____                _           _    _____   __  __  __  __      |--|
@@ -108,8 +109,7 @@ builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.AllowTrailingCommas = false;
 
-    // Official CIPP-API has absolutely no standards for serializing JSON, we need this to match it, and it hurts my soul immensly.
-    options.SerializerOptions.PropertyNamingPolicy = null;
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 });
 
 builder.WebHost.UseUrls();
@@ -204,7 +204,7 @@ foreach (double version in CoreEnvironment.ApiRouteVersions)
 
 CoreEnvironment.ApiVersionSet = apiVersionSetBuilder.ReportApiVersions().Build();
 
-// /bootstrap special API endpoints for bootstrapping this API, not used by anything other than FFPP realistically
+// /bootstrap special API endpoints for bootstrapping this API, not used by anything other than RocketRMM realistically
 ApiBootstrap.BootsrapRoutes.InitRoutes(ref app);
 
 // /x.x (CoreEnvironment.ApiDev) path which uses the latest devenv API specification (will only be accessible if ShowDevEnvEndpoints = true)
