@@ -68,7 +68,8 @@ namespace RocketRMM.Common
             Directory.CreateDirectory(PersistentDir);
             Console.WriteLine($"Cache Directory: {CacheDir}");
             Console.WriteLine($"Data Directory: {DataDir}");
-            Console.WriteLine($"Persistent Directory: {PersistentDir}");
+            Console.WriteLine($@"Persistent Directory: {PersistentDir}");
+            Console.WriteLine("");
         }
 
         /// <summary>

@@ -249,4 +249,4 @@ if (CoreEnvironment.RunSwagger)
 
 //await new FfppLogs().LogDb.LogRequest("Test Message", "", "Information", "M365B654613.onmicrosoft.com", "ThisIsATest");
 
-//app.Run();
+app.Run();
