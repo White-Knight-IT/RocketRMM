@@ -498,9 +498,6 @@ namespace RocketRMM
 
                     var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(100));
 
-                    certificate.FriendlyName = $"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Root CA";
-                    string hh = await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey());
-
                     // Create PFX (PKCS #12) with private key
                     File.WriteAllBytes($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.pfx", certificate.Export(X509ContentType.Pfx, await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey(CoreEnvironment.CaKeyPasswordLevel))));
 
