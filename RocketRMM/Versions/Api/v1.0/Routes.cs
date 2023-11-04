@@ -1,6 +1,5 @@
 ﻿using Microsoft.Identity.Web.Resource;
 using System.Security.Claims;
-using RocketRMM.Common;
 using RocketRMM.Data;
 using RocketRMM.Api.v10.Users;
 
@@ -191,7 +190,7 @@ namespace RocketRMM.Api.v10
             {
                 List<string> roles = [];
 
-                // I think we can only have one role but I'll iterate just in case it happens
+                // Make sure we get all roles
                 foreach (Claim c in context.User.Claims.Where(x => x.Type.ToLower().Equals("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")).ToList())
                 {
                     roles.Add(c.Value);
@@ -219,7 +218,7 @@ namespace RocketRMM.Api.v10
         private static void CheckUserIsReader(HttpContext context)
         {
             string[] scopes = [CoreEnvironment.ApiAccessScope];
-            string[] roles = ["owner", "admin", "tech", "reader"];
+            string[] roles = [CoreEnvironment.RoleOwner, CoreEnvironment.RoleAdmin, CoreEnvironment.RoleTech, CoreEnvironment.RoleReader];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
@@ -227,7 +226,7 @@ namespace RocketRMM.Api.v10
         private static void CheckUserIsTech(HttpContext context)
         {
             string[] scopes = [CoreEnvironment.ApiAccessScope];
-            string[] roles = ["owner", "admin", "tech"];
+            string[] roles = [CoreEnvironment.RoleOwner, CoreEnvironment.RoleAdmin, CoreEnvironment.RoleTech];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
@@ -235,7 +234,7 @@ namespace RocketRMM.Api.v10
         private static void CheckUserIsAdmin(HttpContext context)
         {
             string[] scopes = [CoreEnvironment.ApiAccessScope];
-            string[] roles = ["owner", "admin"];
+            string[] roles = [CoreEnvironment.RoleOwner, CoreEnvironment.RoleAdmin];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }
@@ -243,7 +242,7 @@ namespace RocketRMM.Api.v10
         private static void CheckUserIsOwner(HttpContext context)
         {
             string[] scopes = [CoreEnvironment.ApiAccessScope];
-            string[] roles = ["owner"];
+            string[] roles = [CoreEnvironment.RoleOwner];
             context.ValidateAppRole(roles);
             context.VerifyUserHasAnyAcceptedScope(scopes);
         }

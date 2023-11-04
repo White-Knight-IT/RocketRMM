@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RocketRMM.Common
+namespace RocketRMM
 {
     internal class EntraSam
     {
@@ -782,13 +782,13 @@ namespace RocketRMM.Common
                     };
 
                     JsonElement createdSamApp = await GraphRequestHelper.NewGraphPostRequest("https://graph.microsoft.com/v1.0/applications", CoreEnvironment.Secrets.TenantId, samApp, HttpMethod.Post, "https://graph.microsoft.com/.default", true);
-                    Console.WriteLine("Waiting 30 seconds for app to progagate through Azure before setting a password on it...");
+                    Utilities.ConsoleColourWriteLine("Waiting 30 seconds for app to progagate through Azure before setting a password on it...");
                     await Task.Delay(30000); // Have to wait about 30 seconds for Azure to properly replicate the app before we can set password on it
-                    var appPasswordJson = await GraphRequestHelper.NewGraphPostRequest($"https://graph.microsoft.com/v1.0/applications/{createdSamApp.GetProperty("id").GetString()}/addPassword", CoreEnvironment.Secrets.TenantId, new PasswordCredential() { DisplayName = "FFPP-Pwd" }, HttpMethod.Post, "https://graph.microsoft.com/.default", true);
+                    var appPasswordJson = await GraphRequestHelper.NewGraphPostRequest($"https://graph.microsoft.com/v1.0/applications/{createdSamApp.GetProperty("id").GetString()}/addPassword", CoreEnvironment.Secrets.TenantId, new PasswordCredential() { DisplayName = "RocketRMM-Pwd", EndDateTime = DateTime.UtcNow.AddYears(5) }, HttpMethod.Post, "https://graph.microsoft.com/.default", true);
                     var servicePrincipleJson = await GraphRequestHelper.NewGraphPostRequest("https://graph.microsoft.com/v1.0/servicePrincipals", CoreEnvironment.Secrets.TenantId, new AppId() { appId = createdSamApp.GetProperty("appId").GetString() }, HttpMethod.Post, "https://graph.microsoft.com/.default", true);
                     var adminAgentGroupJson = await GraphRequestHelper.NewGraphGetRequest("https://graph.microsoft.com/v1.0/groups?$filter=startswith(displayName,'AdminAgents')&$select=id", CoreEnvironment.Secrets.TenantId, "https://graph.microsoft.com/.default", true);
                     string jsonString = $@"{{""@odata.id"":""https://graph.microsoft.com/v1.0/servicePrincipals/{servicePrincipleJson.GetProperty("id").GetString()}""}}";
-                    Console.WriteLine("Waiting 30 seconds for Service Principal to progagate through Azure before assigning it as a member of AdminAgents group...");
+                    Utilities.ConsoleColourWriteLine("Waiting 30 seconds for Service Principal to progagate through Azure before assigning it as a member of AdminAgents group...");
                     await Task.Delay(30000);
                     await GraphRequestHelper.NewGraphPostRequest($"https://graph.microsoft.com/v1.0/groups/{adminAgentGroupJson[0].GetProperty("id").GetString()}/members/$ref", CoreEnvironment.Secrets.TenantId, JsonSerializer.Deserialize<JsonElement>(jsonString), HttpMethod.Post, "https://graph.microsoft.com/.default", true);
                     return new() { EntraSam = createdSamApp, AppPassword = appPasswordJson.GetProperty("secretText").GetString() ?? string.Empty };
@@ -798,7 +798,7 @@ namespace RocketRMM.Common
                     samApp.displayName = appName;
                     samApp.signInAudience = "AzureADMyOrg";
                     var options = new JsonSerializerOptions { WriteIndented = true };
-                    samApp.requiredResourceAccess = new List<RequiredResourceAccess>() { new() { ResourceAccess = [new() { Id = new Guid("e1fe6dd8ba314d6189e788639da4683d"), Type = "Scope" }], ResourceAppId = new Guid("0000000300000000c000000000000000") }};
+                    samApp.requiredResourceAccess = new List<RequiredResourceAccess>() { new() { ResourceAccess = [new() { Id = new Guid("e1fe6dd8ba314d6189e788639da4683d"), Type = "Scope" }], ResourceAppId = new Guid("0000000300000000c000000000000000") } };
 
                     if (spaRedirectUri != null)
                     {
@@ -922,6 +922,8 @@ namespace RocketRMM.Common
         {
             [JsonInclude]
             internal string DisplayName { get; set; }
+            [JsonInclude]
+            internal DateTime EndDateTime { get; set; }
         }
 
         internal struct AppId

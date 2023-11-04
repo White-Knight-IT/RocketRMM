@@ -4,17 +4,17 @@ using System.ComponentModel.DataAnnotations;
 using RocketRMM.Data.Logging;
 
 namespace RocketRMM.Data
-{
-    public class UserProfilesDbContext : DbContext
+{/*
+    public class AgentDbContext : DbContext
     {
-        private DbSet<UserProfile>? _userProfiles { get; set; }
+        private DbSet<Agent>? _agents { get; set; }
 
-        public UserProfilesDbContext()
+        public AgentDbContext()
         {
 
         }
 
-        internal async Task<bool> AddUserProfile(UserProfile user)
+        internal async Task<bool> AddAgent(Agent agent)
         {
             Task<bool> addTask = new(() =>
             {
@@ -53,7 +53,7 @@ namespace RocketRMM.Data
             return true;
         }
 
-        internal async Task<UserProfile>? GetById(Guid userId)
+        internal async Task<Agent>? GetById(Guid userId)
         {
             try
             {
@@ -67,11 +67,11 @@ namespace RocketRMM.Data
             return null;
         }
 
-        internal async Task<bool> UpdateUserProfile(UserProfile userProfile, bool updatePhoto = true)
+        internal async Task<bool> UpdateAgent(Agent agent)
         {
             try
             {
-                UserProfile? foundUser = await _userProfiles.FindAsync(userProfile.UserId);
+                Agent? foundAgent = await _agents.FindAsync(userProfile.UserId);
 
                 if (foundUser != null)
                 {
@@ -123,25 +123,9 @@ namespace RocketRMM.Data
     }
 
     /// <summary>
-    /// Represents a UserProfile object as it exists in the UserProfiles DB
-    /// </summary>
-    public class UserProfile
-    {
-        [Key] // Public key
-        public Guid UserId { get; set; }
-        public string? IdentityProvider { get; set; }
-        public string? Name { get; set; }
-        public string? UserDetails { get; set; }
-        [NotMapped] // We never save roles they may change and relying on old roles is security risk
-        public List<string>? UserRoles { get; set; }
-        public string? Theme { get; set; }
-        public string? PhotoData { get; set; }
-    }
-
-    /// <summary>
     /// A class for accessing the UserProfilesDbContext in a thread safe manner
     /// </summary>
-    public static class UserProfilesDbThreadSafeCoordinator
+    public static class AgentDbThreadSafeCoordinator
     {
         private static bool _locked = false;
 
@@ -151,7 +135,7 @@ namespace RocketRMM.Data
         /// <param name="userProfile">The user profile to update in DB</param>
         /// <param name="updatePhoto">Bool to allow/reject updating of photo</param>
         /// <returns>bool indicating success</returns>
-        internal static async Task<bool> ThreadSafeUpdateUserProfile(UserProfile userProfile, bool updatePhoto)
+        internal static async Task<bool> ThreadSafeUpdateAgent(UserProfile userProfile, bool updatePhoto)
         {
             WaitForUnlock();
 
@@ -161,7 +145,7 @@ namespace RocketRMM.Data
             {
                 using (UserProfilesDbContext userProfiles = new())
                 {
-                    return userProfiles.UpdateUserProfile(userProfile, updatePhoto).Result;
+                    return userProfiles.UpdateAgent(userProfile, updatePhoto).Result;
                 }
             });
 
@@ -173,21 +157,21 @@ namespace RocketRMM.Data
         /// </summary>
         /// <param name="userId">User ID of the user profile to return</param>
         /// <returns>User profile if it exists else null</returns>
-        internal static async Task<UserProfile>? ThreadSafeGetUserProfile(Guid userId)
+        internal static async Task<Agent>? ThreadSafeGetAgent(Guid userId)
         {
             WaitForUnlock();
 
             _locked = true;
 
-            Task<UserProfile>? getUserProfile = new(() =>
+            Task<Agent>? getUserProfile = new(() =>
             {
-                using (UserProfilesDbContext userProfiles = new())
+                using (AgentDbContext userProfiles = new())
                 {
                     return userProfiles.GetById(userId).Result;
                 }
             });
 
-            return await ExecuteQuery<UserProfile>(getUserProfile);
+            return await ExecuteQuery<Agent>(getUserProfile);
         }
 
         /// <summary>
@@ -195,7 +179,7 @@ namespace RocketRMM.Data
         /// </summary>
         /// <param name="excludedTenant">tenant to add to DB</param>
         /// <returns>bool indicating success</returns>
-        internal static async Task<bool> ThreadSafeAdd(UserProfile userProfile)
+        internal static async Task<bool> ThreadSafeAdd(Agent agent)
         {
             WaitForUnlock();
 
@@ -203,7 +187,7 @@ namespace RocketRMM.Data
 
             Task<bool> addUserProfile = new(() =>
             {
-                using UserProfilesDbContext userProfiles = new();
+                using AgentDbContext userProfiles = new();
                 return userProfiles.AddUserProfile(userProfile).Result;
             });
 
@@ -238,4 +222,4 @@ namespace RocketRMM.Data
             }
         }
     }
-}
+*/}

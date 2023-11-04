@@ -396,6 +396,31 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Potential secrets
+*/plain.secrets.json
+plain.secrets.json #pre-ingestion to encrypted state
+*/encrypted.secrets.json
+encrypted.secrets.json
+bootstrap.json
+*/bootstrap.json
+apizeroconf.json
+api.zeroconf.json
+api.zero.conf.json
+api.zeroconf
+*/api.zeroconf
+api.zeroconf.aes
+*/api.zeroconf.aes
+device.id.token
+*/device.id.token
 *.secret
+*.secrets
+*/*.secret
+*/*.secrets
+*/*.token
 *.token
 *.bytes
+*.cer
+*.pfx
+*/*.cer
+*/*.pfx

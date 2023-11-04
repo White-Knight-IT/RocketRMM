@@ -1,6 +1,4 @@
-﻿using RocketRMM.Common;
-
-namespace RocketRMM.Api.v11
+﻿namespace RocketRMM.Api.v11
 {
     /// <summary>
     /// /v1.1 ### THIS IS THE V1.1 ENDPOINTS (CURRENT DEV) ###

@@ -5,7 +5,7 @@ using System.Web;
 using RocketRMM.Data.Logging;
 using System.Text.Json.Serialization;
 
-namespace RocketRMM.Common
+namespace RocketRMM
 {
     internal static class GraphRequestHelper
     {
@@ -105,7 +105,7 @@ namespace RocketRMM.Common
                 else if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                 {
                     // Sleep 1 second if we get a 429 and retry
-                    Console.WriteLine($"Got a 429 too many requests to GetGraphToken, waiting 1 second and retrying...");
+                    Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to GetGraphToken, waiting 1 second and retrying...");
                     Thread.CurrentThread.Join(1020);
                     return await GetGraphToken(tenantId, asApp, appId, refreshToken, scope, returnRefresh);
                 }
@@ -203,7 +203,7 @@ namespace RocketRMM.Common
                         else if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                         {
                             // Sleep 1 second if we get a 429 and retry
-                            Console.WriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
+                            Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
                             Thread.CurrentThread.Join(1020);
                             return await NewGraphGetRequest(uri, tenantId, scope, asApp, noPagination);
                         }
@@ -225,7 +225,7 @@ namespace RocketRMM.Common
                 catch (Exception ex)
                 {
                     CoreEnvironment.RunErrorCount++;
-                    Console.WriteLine($"Exception in NewGraphGetRequest: {ex.Message}");
+                    Utilities.ConsoleColourWriteLine($"Exception in NewGraphGetRequest: {ex.Message}");
                     nextUrl = string.Empty;
                     throw;
                 }
@@ -284,7 +284,7 @@ namespace RocketRMM.Common
                     else if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                     {
                         // Sleep 1 second if we get a 429 and retry
-                        Console.WriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
+                        Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
                         Thread.CurrentThread.Join(1020);
                         return await NewGraphGetRequestBytes(uri, tenantId, scope, asApp, contentHeader);
                     }
@@ -305,7 +305,7 @@ namespace RocketRMM.Common
             {
                 CoreEnvironment.RunErrorCount++;
 
-                Console.WriteLine($"Exception in NewGraphGetRequest: {ex.Message}");
+                Utilities.ConsoleColourWriteLine($"Exception in NewGraphGetRequest: {ex.Message}");
                 throw;
             }
 
@@ -343,10 +343,10 @@ namespace RocketRMM.Common
                         }
                     }
 
-                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })); 
+                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
                     requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-                     HttpResponseMessage responseMessage = await SendHttpRequest(requestMessage);
+                    HttpResponseMessage responseMessage = await SendHttpRequest(requestMessage);
 
                     if (responseMessage.IsSuccessStatusCode)
                     {
@@ -364,7 +364,7 @@ namespace RocketRMM.Common
                     else if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                     {
                         // Sleep 1 second if we get a 429 and retry
-                        Console.WriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
+                        Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
                         Thread.CurrentThread.Join(1020);
                         return await NewGraphPostRequest(uri, tenantId, body, type, scope, asApp);
                     }
@@ -382,7 +382,7 @@ namespace RocketRMM.Common
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Console.WriteLine($"Exception in NewGraphPostRequest: {ex.Message}");
+                Utilities.ConsoleColourWriteLine($"Exception in NewGraphPostRequest: {ex.Message}");
                 throw;
             }
 

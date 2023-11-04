@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace RocketRMM.Common
+namespace RocketRMM
 {
     internal class CoreZeroConfiguration
     {
@@ -29,8 +29,6 @@ namespace RocketRMM.Common
         internal string? AppPassword { get; set; }
         [JsonInclude]
         internal string? RefreshToken { get; set; }
-        [JsonInclude]
-        internal string? ExchangeRefreshToken { get; set; }
         [JsonInclude]
         internal bool? IsBootstrapped { get; set; }
 
@@ -141,13 +139,13 @@ const config = {{
                 }
                 else if (!CoreEnvironment.CheckForBootstrap().Result)
                 {
-                    Console.WriteLine($"Waiting for bootstrap.json to be placed at {CoreEnvironment.PersistentDir} to provision the API...");
+                    Utilities.ConsoleColourWriteLine($"Waiting for bootstrap.json to be placed at {CoreEnvironment.PersistentDir} to provision the API...");
                 }
             }
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Console.WriteLine($"Exception reading CoreZeroConfiguration file: {ex.Message}");
+                Utilities.ConsoleColourWriteLine($"Exception reading CoreZeroConfiguration file: {ex.Message}");
             }
 
             return false;
@@ -169,18 +167,18 @@ const config = {{
         {
             try
             {
-                _ = Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true);
-                CoreEnvironment.Secrets.TenantId = this.TenantId;
-                CoreEnvironment.Secrets.ApplicationId = this.ClientId;
-                CoreEnvironment.Secrets.ApplicationSecret = this.AppPassword;
-                CoreEnvironment.Secrets.RefreshToken = this.RefreshToken;
-                CoreEnvironment.IsBoostrapped = this.IsBootstrapped ?? false;
+                _ = Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true, null, true);
+                CoreEnvironment.Secrets.TenantId = TenantId;
+                CoreEnvironment.Secrets.ApplicationId = ClientId;
+                CoreEnvironment.Secrets.ApplicationSecret = AppPassword;
+                CoreEnvironment.Secrets.RefreshToken = RefreshToken;
+                CoreEnvironment.IsBoostrapped = IsBootstrapped ?? false;
                 return true;
             }
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Console.WriteLine($"Exception saving CoreZeroConfiguration file: {ex.Message}");
+                Utilities.ConsoleColourWriteLine($"Exception saving CoreZeroConfiguration file: {ex.Message}");
             }
 
             return false;

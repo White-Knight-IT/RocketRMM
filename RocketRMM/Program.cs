@@ -1,4 +1,3 @@
-using RocketRMM.Common;
 using ApiCurrent = RocketRMM.Api;
 using ApiV10 = RocketRMM.Api.v10;
 using ApiDev = RocketRMM.Api.v11;
@@ -7,22 +6,18 @@ using Asp.Versioning.Builder;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
-using RocketRMM.Data.Logging;
-using Microsoft.EntityFrameworkCore;
-using RocketRMM.Data;
-using Microsoft.Extensions.DependencyInjection;
-using System.Drawing.Text;
 using System.Text.Json;
+using RocketRMM;
 
-Console.WriteLine($@"                                                                    /\
+Utilities.ConsoleColourWriteLine($@"                                                                    /\
  _____                _           _    _____   __  __  __  __      |--|
 |  __ \              | |         | |  |  __ \ |  \/  ||  \/  |     |--|
 | |__) |  ___    ___ | | __  ___ | |_ | |__) || \  / || \  / |    /|/\|\
 |  _  /  / _ \  / __|| |/ / / _ \| __||  _  / | |\/| || |\/| |   /_||||_\
 | | \ \ | (_) || (__ |   < |  __/| |_ | | \ \ | |  | || |  | |      **
 |_|  \_\ \___/  \___||_|\_\ \___| \__||_|  \_\|_|  |_||_|  |_|      **
-
-RocketRMM
+",ConsoleColor.Yellow);
+Utilities.ConsoleColourWriteLine($@"RocketRMM
 
 Created by Ian Harris (@knightian) - White Knight IT - https://whiteknightit.com.au
 
@@ -31,7 +26,7 @@ Created by Ian Harris (@knightian) - White Knight IT - https://whiteknightit.com
 Licensed under the AGPL-3.0 License + Security License Addendum
 
 v{CoreEnvironment.CoreVersion}
-");
+", ConsoleColor.DarkGray);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,16 +41,22 @@ CoreEnvironment.DbUser = builder.Configuration.GetValue<string>("ApiSettings:DbS
 CoreEnvironment.DbPassword = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbPassword").Trim() ?? "wellknownpassword";
 CoreEnvironment.DbServer = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbServer").Trim() ?? "localhost";
 CoreEnvironment.DbServerPort = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbServerPort").Trim() ?? "7704";
-CoreEnvironment.CacheDir = builder.Configuration.GetValue<string>("ApiSettings:CachePath").Trim() ?? $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}Cache";
+CoreEnvironment.DataDir = builder.Configuration.GetValue<string>("ApiSettings:DataPath").Trim() ?? $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}data";
+CoreEnvironment.CacheDir = builder.Configuration.GetValue<string>("ApiSettings:CachePath").Trim() ?? $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}cache";
 CoreEnvironment.PersistentDir = builder.Configuration.GetValue<string>("ApiSettings:PersistentPath").Trim() ?? CoreEnvironment.WorkingDir;
+CoreEnvironment.PkiDir =  $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}pki";
+CoreEnvironment.CaDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca";
+CoreEnvironment.IntermediaryDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}intermediaries";
+CoreEnvironment.CertificatesDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}certificates";
+// Build Data/Cache directories if they don't exist
+CoreEnvironment.DataAndCacheDirectoriesBuild();
 CoreEnvironment.WebRootPath = builder.Configuration.GetValue<string>("ApiSettings:WebRootPath").Trim() ?? $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot";
 CoreEnvironment.RocketRmmFrontEndUri = builder.Configuration.GetValue<string>("ApiSettings:WebUiUrl").TrimEnd('/').Trim() ?? "http://localhost";
 CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
 CoreEnvironment.KestrelHttps = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url").Trim() ?? "https://localhost:7074";
 CoreEnvironment.KestrelHttp = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Http:Url").Trim() ?? "http://localhost:7073";
 
-// Build Data/Cache directories if they don't exist
-CoreEnvironment.DataAndCacheDirectoriesBuild();
+Utilities.Crypto.CreateCertificate();
 
 // We skip a lot of the setup/config stuff if it is a DB migration
 if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
@@ -122,13 +123,16 @@ if (CoreEnvironment.ShowDevEnvEndpoints)
 
 if (CoreEnvironment.IsDebug)
 {
-    Console.WriteLine("######################## RocketRMM is running in DEBUG context");
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Utilities.ConsoleColourWriteLine("######################## RocketRMM is running in DEBUG context", ConsoleColor.Yellow);
 
     // In dev env we can get secrets from local environment (use `dotnet user-secrets` tool to safely store local secrets)
     if (builder.Environment.IsDevelopment())
     {
-        Console.WriteLine("######################## RocketRMM is running from a development environment");
+        Utilities.ConsoleColourWriteLine("######################## RocketRMM is running from a development environment", ConsoleColor.Yellow);
     }
+
+    Utilities.ConsoleColourWriteLine("");
 }
 
 // Prep Swagger and specify the auth settings for it to use a EntraSam on Azure AD

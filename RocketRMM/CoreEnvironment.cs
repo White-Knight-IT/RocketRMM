@@ -2,13 +2,14 @@
 using Asp.Versioning;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data.Logging;
 using RocketRMM.Data;
-using System.Text.Json.Serialization;
+using System.Net.NetworkInformation;
 
-namespace RocketRMM.Common
+namespace RocketRMM
 {
     internal class CoreEnvironment
     {
@@ -16,7 +17,7 @@ namespace RocketRMM.Common
         // Roles for managing permissions
         internal static readonly string RoleOwner = "owner";
         internal static readonly string RoleAdmin = "admin";
-        internal static readonly string RoleEditor = "editor";
+        internal static readonly string RoleTech = "tech";
         internal static readonly string RoleReader = "reader";
 #if DEBUG
         internal static readonly bool IsDebug = true;
@@ -25,13 +26,18 @@ namespace RocketRMM.Common
 #endif
         internal static readonly string CoreVersion = "0.0.1:alpha";
         internal static readonly string WorkingDir = Directory.GetCurrentDirectory();
-        internal static readonly string DataDir = $"{WorkingDir}{Path.DirectorySeparatorChar}Data";
-        internal static string? CacheDir;
         internal static string? PersistentDir;
+        internal static string? DataDir;
+        internal static string? CacheDir;
+        internal static string? PkiDir;
+        internal static string? CaDir = $"{PkiDir}{Path.DirectorySeparatorChar}ca";
+        internal static string? IntermediaryDir = $"{PkiDir}{Path.DirectorySeparatorChar}intermediaries";
+        internal static string? CertificatesDir = $"{PkiDir}{Path.DirectorySeparatorChar}certificates";
+        internal static string? CrlDir = $"{PkiDir}{Path.DirectorySeparatorChar}crl";
         internal static string? WebRootPath;
         internal static readonly string ApiHeader = "Api";
         internal static readonly string ApiAccessScope = "rocketrmm-api.access";
-        internal static readonly string FfppSimulatedAuthUsername = "RocketRMM Simulated Authentication";
+        internal static readonly string SimulatedAuthUsername = "RocketRMM Simulated Authentication";
         internal static string? RocketRmmFrontEndUri;
         internal static string? Db;
         internal static string? DbUser;
@@ -59,34 +65,41 @@ namespace RocketRMM.Common
         internal static bool IsBoostrapped = false;
         internal static List<AccessToken> AccessTokenCache = [];
         internal static readonly string DefaultSystemUsername = "HAL";
+        internal static readonly int CaKeyPasswordLevel = 10000;  
+
         /// <summary>
         /// Build data directories including cache directories if they don't exist
         /// </summary>
         internal static void DataAndCacheDirectoriesBuild()
         {
-            Directory.CreateDirectory(CacheDir);
-            Directory.CreateDirectory(DataDir);
             Directory.CreateDirectory(PersistentDir);
-            Console.WriteLine($"Cache Directory: {CacheDir}");
-            Console.WriteLine($"Data Directory: {DataDir}");
-            Console.WriteLine($@"Persistent Directory: {PersistentDir}");
-            Console.WriteLine("");
+            Directory.CreateDirectory(DataDir);
+            Directory.CreateDirectory(CacheDir);
+            Directory.CreateDirectory(CaDir);
+            Directory.CreateDirectory($"{IntermediaryDir}{Path.DirectorySeparatorChar}revoked");
+            Directory.CreateDirectory($"{CertificatesDir}{Path.DirectorySeparatorChar}revoked");
+            Directory.CreateDirectory(CrlDir);
+            Utilities.ConsoleColourWriteLine($"Cache Directory: {CacheDir}", ConsoleColor.Cyan);
+            Utilities.ConsoleColourWriteLine($"Data Directory: {DataDir}", ConsoleColor.Cyan);
+            Utilities.ConsoleColourWriteLine($@"Persistent Directory: {PersistentDir}", ConsoleColor.Cyan);
+            Utilities.ConsoleColourWriteLine("");
         }
 
         /// <summary>
-        /// Gets a unique 32 byte Device ID
+        /// Get keys that are pinned to the device id + unique entropy
         /// </summary>
-        /// <returns>DeviceId as byte[32] array</returns>
-        internal static async Task<byte[]> GetDeviceId()
+        /// <param name="level">number of times to hash wrap the key before producing it. This allows us to create many different encryption keys all from the same source of entropy</param>
+        /// <returns></returns>
+        internal static async Task<byte[]> GetDeviceIdGeneratedKey(int level = 0, int iterations = 183029)
         {
-            byte[] hmacSalt = Encoding.UTF8.GetBytes($"rocketRMMDevId{await GetDeviceIdTokenSeed()}seedBytes");
+            byte[] hmacSalt = SHA512.HashData(Encoding.UTF8.GetBytes($"saltisnot{await GetDeviceId()}secretsquirell"));
 
             try
             {
                 byte[] hashyBytes = HMACSHA512.HashData(hmacSalt, await GetEntropyBytes());
 
-                // key strech the device id using 183029 HMACSHA512 iterations
-                for (int i = 0; i < 183029; i++)
+                // key strech the key using HMACSHA512 iterations + level to create as many different keys as we like from the single entropy source
+                for (int i = 0; i < iterations + level; i++)
                 {
                     hashyBytes = HMACSHA512.HashData(hmacSalt, hashyBytes);
                 }
@@ -100,9 +113,9 @@ namespace RocketRMM.Common
 
                 _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
-                    Message = $"Exception GetDeviceId: {ex.Message}",
+                    Message = $"Exception GetDeviceIdGeneratedKey: {ex.Message}",
                     Severity = "Error",
-                    API = "GetDeviceId"
+                    API = "GetDeviceIdGeneratedKey"
                 });
 
                 throw;
@@ -115,7 +128,7 @@ namespace RocketRMM.Common
         /// <param name="error"></param>
         internal static void ShutDownApi(int error = 0)
         {
-            System.Environment.Exit(error);
+            Environment.Exit(error);
         }
 
         /// <summary>
@@ -139,7 +152,7 @@ namespace RocketRMM.Common
             }
             catch (Exception)
             {
-                Console.WriteLine($"Didn't create DB tables, this is expected if they already exist - server: {DbServer} - port: {DbServerPort}");
+                Utilities.ConsoleColourWriteLine($"Didn't create DB tables, this is expected if they already exist - server: {DbServer} - port: {DbServerPort}");
             }
 
             return false;
@@ -154,7 +167,7 @@ namespace RocketRMM.Common
             string entropyBytesPath = $"{PersistentDir}{Path.DirectorySeparatorChar}unique.entropy.bytes";
             if (!File.Exists(entropyBytesPath))
             {
-                await File.WriteAllTextAsync(entropyBytesPath, await Utilities.RandomByteString());
+                await File.WriteAllTextAsync(entropyBytesPath, await Utilities.RandomByteString(4098,true));
             }
 
             return await Utilities.Base64Decode(await File.ReadAllTextAsync(entropyBytesPath));
@@ -173,7 +186,7 @@ namespace RocketRMM.Common
                 // Bootstrap file exists and we don't already have an app password
                 if (File.Exists(bootstrapPath))
                 {
-                    Console.WriteLine($"Found bootstrap.json at {bootstrapPath}");
+                    Utilities.ConsoleColourWriteLine($"Found bootstrap.json at {bootstrapPath}");
                     JsonElement result = await Utilities.ReadJsonFromFile<JsonElement>(bootstrapPath);
                     Secrets.TenantId = result.GetProperty("TenantId").GetString();
                     Secrets.ApplicationId = result.GetProperty("ApplicationId").GetString();
@@ -184,8 +197,8 @@ namespace RocketRMM.Common
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to setup Azure AD EntraSam applications using bootstrap.json, exception: {ex.Message}");
-                Console.WriteLine("This is a fatal exception because the API cannot function without the needed EntraSam apps. Shutting API down...");
+                Utilities.ConsoleColourWriteLine($"Failed to setup Azure AD EntraSam applications using bootstrap.json, exception: {ex.Message}");
+                Utilities.ConsoleColourWriteLine("This is a fatal exception because the API cannot function without the needed EntraSam apps. Shutting API down...");
                 ShutDownApi(1);
             }
 
@@ -198,11 +211,11 @@ namespace RocketRMM.Common
         /// <returns></returns>
         internal static async Task<string> GetDeviceTag()
         {
-            return (await GetDeviceIdTokenSeed())[^6..];
+            return (await GetDeviceId())[^6..];
         }
 
         // Gets the DeviceIdTokenSeed used as static entropy in DeviceId generation
-        private static async Task<string> GetDeviceIdTokenSeed()
+        internal static async Task<string> GetDeviceId()
         {
             try
             {
@@ -221,9 +234,9 @@ namespace RocketRMM.Common
 
                 _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
-                    Message = $"Exception GetDeviceIdToken: {ex.Message}",
+                    Message = $"Exception GetDeviceId: {ex.Message}",
                     Severity = "Error",
-                    API = "GetDeviceIdTokenSeed"
+                    API = "GetDeviceId"
                 });
 
                 throw;

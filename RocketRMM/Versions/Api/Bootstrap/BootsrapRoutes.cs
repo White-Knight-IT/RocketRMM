@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Net.Http.Headers;
-using RocketRMM.Common;
 
 namespace RocketRMM.Api.Bootstrap
 {

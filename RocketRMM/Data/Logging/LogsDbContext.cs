@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using RocketRMM.Common;
 
 namespace RocketRMM.Data.Logging
 {
@@ -33,7 +32,7 @@ namespace RocketRMM.Data.Logging
         {
             if (CoreEnvironment.IsDebug)
             {
-                Console.WriteLine(content);
+                Utilities.ConsoleColourWriteLine(content);
                 return true;
             }
 
@@ -63,7 +62,7 @@ namespace RocketRMM.Data.Logging
 
                 if (logEntry.Severity.ToLower().Equals("debug") && !CoreEnvironment.IsDebug)
                 {
-                    Console.WriteLine("Not writing to log file - Debug mode is not enabled.");
+                    Utilities.ConsoleColourWriteLine("Not writing to log file - Debug mode is not enabled.");
                 }
 
                 // Write to console for debug environment
@@ -106,7 +105,7 @@ namespace RocketRMM.Data.Logging
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Console.WriteLine($"Exception writing log entry in RocketRMMLogs: {ex.Message}");
+                Utilities.ConsoleColourWriteLine($"Exception writing log entry in RocketRMMLogs: {ex.Message}");
             }
 
             return false;

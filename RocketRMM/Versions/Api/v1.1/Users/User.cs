@@ -1,6 +1,4 @@
-﻿using RocketRMM.Common;
-
-namespace RocketRMM.Api.v11.Users
+﻿namespace RocketRMM.Api.v11.Users
 {
     public enum UserPhotoSize : uint
     {

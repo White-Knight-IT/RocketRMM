@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -9,6 +9,10 @@
 	<AssemblyName>RocketRMM</AssemblyName>
 	<RollForward>Minor</RollForward>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Test Requests\RocketRMM.http" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Http" Version="7.1.0" />
