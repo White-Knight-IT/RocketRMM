@@ -43,7 +43,7 @@ namespace RocketRMM
 
             // step one - create EntraSam SPA that the Swagger UI will use to authenticate
 
-            JsonElement samSpa = (await EntraSam.CreateSAMAuthApp($"RocketRMM UI - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Spa, domain, spaRedirectUri: new string[] { $"{CoreEnvironment.RocketRmmFrontEndUri.TrimEnd('/')}/swagger/oauth2-redirect.html", $"{CoreEnvironment.KestrelHttps}/swagger/oauth2-redirect.html", $"{CoreEnvironment.RocketRmmFrontEndUri.TrimEnd('/')}/index.html", $"{CoreEnvironment.KestrelHttps}/index.html", CoreEnvironment.RocketRmmFrontEndUri.TrimEnd('/'), CoreEnvironment.KestrelHttps })).EntraSam;
+            JsonElement samSpa = (await EntraSam.CreateSAMAuthApp($"RocketRMM UI - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Spa, domain, spaRedirectUri: new string[] { $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/swagger/oauth2-redirect.html", $"{CoreEnvironment.KestrelHttps}/swagger/oauth2-redirect.html", $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/index.html", $"{CoreEnvironment.KestrelHttps}/index.html", CoreEnvironment.FrontEndUri.TrimEnd('/'), CoreEnvironment.KestrelHttps })).EntraSam;
             string openIdClientId = samSpa.GetProperty("appId").GetString() ?? string.Empty;
             if (!openIdClientId.Equals(string.Empty))
             {
@@ -89,8 +89,8 @@ const config = {{
   auth: {{
     clientId: '{zeroConf.OpenIdClientId}',
     authority: 'https://login.microsoftonline.com/organizations/',
-    redirectUri: '{CoreEnvironment.RocketRmmFrontEndUri}',
-    postLogoutRedirectUri: '{CoreEnvironment.RocketRmmFrontEndUri}/signedout'
+    redirectUri: '{CoreEnvironment.FrontEndUri}',
+    postLogoutRedirectUri: '{CoreEnvironment.FrontEndUri}/signedout'
   }},
   cache: {{
     cacheLocation: 'sessionStorage',
@@ -102,7 +102,7 @@ const config = {{
     deviceTag: '{await CoreEnvironment.GetDeviceTag()}'
   }},
   ui: {{
-    frontEndUrl: '{CoreEnvironment.RocketRmmFrontEndUri}',
+    frontEndUrl: '{CoreEnvironment.FrontEndUri}',
     swaggerUi: {CoreEnvironment.ShowSwaggerUi.ToString().ToLower()}
   }}
 }};");

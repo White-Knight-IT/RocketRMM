@@ -761,7 +761,7 @@ namespace RocketRMM
                     };
                     samApp.signInAudience = "AzureADMultipleOrgs";
                     samApp.isFallbackPublicClient = true;
-                    string rocketRmmFrontEnd = CoreEnvironment.RocketRmmFrontEndUri.TrimEnd('/');
+                    string rocketRmmFrontEnd = CoreEnvironment.FrontEndUri.TrimEnd('/');
                     samApp.web = new Web()
                     {
                         RedirectUris = [

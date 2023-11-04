@@ -31,7 +31,7 @@ namespace RocketRMM.Api.Bootstrap
                 {
                     Task<GraphTokenUrl> getUrl = new(() =>
                     {
-                        return new() { Url = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id={CoreEnvironment.Secrets.ApplicationId}&redirect_uri={CoreEnvironment.RocketRmmFrontEndUri}/bootstrap/receivegraphtoken" };
+                        return new() { Url = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id={CoreEnvironment.Secrets.ApplicationId}&redirect_uri={CoreEnvironment.FrontEndUri}/bootstrap/receivegraphtoken" };
                     });
 
                     getUrl.Start();
@@ -53,7 +53,7 @@ namespace RocketRMM.Api.Bootstrap
                 if (!CoreEnvironment.IsBoostrapped)
                 {
                     HttpRequestMessage requestMessage = new(HttpMethod.Post, $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/token");
-                    requestMessage.Content = new StringContent($"client_id={CoreEnvironment.Secrets.ApplicationId}&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code={code}&redirect_uri={CoreEnvironment.RocketRmmFrontEndUri}/bootstrap/receivegraphtoken&grant_type=authorization_code&client_secret={CoreEnvironment.Secrets.ApplicationSecret}");
+                    requestMessage.Content = new StringContent($"client_id={CoreEnvironment.Secrets.ApplicationId}&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code={code}&redirect_uri={CoreEnvironment.FrontEndUri}/bootstrap/receivegraphtoken&grant_type=authorization_code&client_secret={CoreEnvironment.Secrets.ApplicationSecret}");
 
                     requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
@@ -89,12 +89,12 @@ namespace RocketRMM.Api.Bootstrap
                         zeroConf.RefreshToken = CoreEnvironment.Secrets.RefreshToken;
                         _ = zeroConf.Save();
                         //redirect to success page
-                        context.Response.Redirect($"{CoreEnvironment.RocketRmmFrontEndUri}/setup/graphtoken/success");
+                        context.Response.Redirect($"{CoreEnvironment.FrontEndUri}/setup/graphtoken/success");
                     }
                     else
                     {
                         //redirect to error page
-                        context.Response.Redirect($"{CoreEnvironment.RocketRmmFrontEndUri}/setup/graphtoken/error");
+                        context.Response.Redirect($"{CoreEnvironment.FrontEndUri}/setup/graphtoken/error");
                     }
                 }
                 else

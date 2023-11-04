@@ -485,7 +485,7 @@ namespace RocketRMM
                 if (!File.Exists($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.pfx"))
                 {
                     SubjectAlternativeNameBuilder sanBuilder = new();
-                    //sanBuilder.AddDnsName(CoreEnvironment.RocketRmmFrontEndUri.ToLower().Replace(@"https://", "").Replace(@"http://", ""));
+                    //sanBuilder.AddDnsName(CoreEnvironment.FrontEndUri.ToLower().Replace(@"https://", "").Replace(@"http://", ""));
                     sanBuilder.AddDnsName(await CoreEnvironment.GetDeviceId());
                     string commonName = $"CN=RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Root CA\nO = RocketRMM";
                     X500DistinguishedName distinguishedName = new(commonName);
@@ -502,10 +502,12 @@ namespace RocketRMM
                     File.WriteAllBytes($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.pfx", certificate.Export(X509ContentType.Pfx, await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey(CoreEnvironment.CaKeyPasswordLevel))));
 
                     // Create Base 64 encoded CER (public key only)
-                    File.WriteAllText($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.cer",
-                        "-----BEGIN CERTIFICATE-----\r\n"
-                        + await Base64Encode(certificate.Export(X509ContentType.Cert), true)
-                        + "\r\n-----END CERTIFICATE-----");
+                    string pemEncodedCertificate = @$"-----BEGIN CERTIFICATE-----
+{await Base64Encode(certificate.Export(X509ContentType.Cert), true)}
+-----END CERTIFICATE-----";
+                    await File.WriteAllTextAsync($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.cer", pemEncodedCertificate);
+                    await File.WriteAllTextAsync($"{CoreEnvironment.FrontEndUri}{Path.DirectorySeparatorChar}pki{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}ca.cer", pemEncodedCertificate);
+
                 }
             }
         }

@@ -51,7 +51,7 @@ CoreEnvironment.CertificatesDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySepar
 // Build Data/Cache directories if they don't exist
 CoreEnvironment.DataAndCacheDirectoriesBuild();
 CoreEnvironment.WebRootPath = builder.Configuration.GetValue<string>("ApiSettings:WebRootPath").Trim() ?? $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot";
-CoreEnvironment.RocketRmmFrontEndUri = builder.Configuration.GetValue<string>("ApiSettings:WebUiUrl").TrimEnd('/').Trim() ?? "http://localhost";
+CoreEnvironment.FrontEndUri = builder.Configuration.GetValue<string>("ApiSettings:WebUiUrl").TrimEnd('/').Trim() ?? "http://localhost";
 CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
 CoreEnvironment.KestrelHttps = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url").Trim() ?? "https://localhost:7074";
 CoreEnvironment.KestrelHttp = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Http:Url").Trim() ?? "http://localhost:7073";
@@ -78,7 +78,7 @@ if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.Ordi
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "ZeroConf:AzureAd");
 
 // CORS policy to allow the UI to access the API
-string[] corsUris = new string[] { CoreEnvironment.RocketRmmFrontEndUri, CoreEnvironment.KestrelHttps, CoreEnvironment.KestrelHttp } ?? [CoreEnvironment.KestrelHttps, CoreEnvironment.KestrelHttp];
+string[] corsUris = new string[] { CoreEnvironment.FrontEndUri, CoreEnvironment.KestrelHttps, CoreEnvironment.KestrelHttp } ?? [CoreEnvironment.KestrelHttps, CoreEnvironment.KestrelHttp];
 
 builder.Services.AddCors(p => p.AddPolicy("corsapp", builder =>
 {

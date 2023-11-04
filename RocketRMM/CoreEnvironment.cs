@@ -38,7 +38,7 @@ namespace RocketRMM
         internal static readonly string ApiHeader = "Api";
         internal static readonly string ApiAccessScope = "rocketrmm-api.access";
         internal static readonly string SimulatedAuthUsername = "RocketRMM Simulated Authentication";
-        internal static string? RocketRmmFrontEndUri;
+        internal static string? FrontEndUri;
         internal static string? Db;
         internal static string? DbUser;
         internal static string? DbPassword;
