@@ -31,36 +31,29 @@ v{CoreEnvironment.CoreVersion}
 var builder = WebApplication.CreateBuilder(args);
 
 // Load individual settings
-CoreEnvironment.UseHttpsRedirect = builder.Configuration.GetValue<bool>("ApiSettings:HttpsRedirect");
-CoreEnvironment.ShowDevEnvEndpoints = builder.Configuration.GetValue<bool>("ApiSettings:ShowDevEndpoints");
-CoreEnvironment.ShowSwaggerUi = builder.Configuration.GetValue<bool>("ApiSettings:ShowSwaggerUi");
-CoreEnvironment.RunSwagger = builder.Configuration.GetValue<bool>("ApiSettings:RunSwagger");
-CoreEnvironment.ServeStaticFiles = builder.Configuration.GetValue<bool>("ApiSettings:ServeStaticFiles");
-CoreEnvironment.Db = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:Db").Trim() ?? "rocketrmmdb";
-CoreEnvironment.DbUser = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbUser").Trim() ?? "rocketrmmcoreservice";
-CoreEnvironment.DbPassword = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbPassword").Trim() ?? "wellknownpassword";
-CoreEnvironment.DbServer = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbServer").Trim() ?? "localhost";
-CoreEnvironment.DbServerPort = builder.Configuration.GetValue<string>("ApiSettings:DbSettings:DbServerPort").Trim() ?? "7704";
-CoreEnvironment.DataDir = builder.Configuration.GetValue<string>("ApiSettings:DataPath").Trim() ?? $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}data";
-CoreEnvironment.CacheDir = builder.Configuration.GetValue<string>("ApiSettings:CachePath").Trim() ?? $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}cache";
-CoreEnvironment.PersistentDir = builder.Configuration.GetValue<string>("ApiSettings:PersistentPath").Trim() ?? CoreEnvironment.WorkingDir;
+CoreEnvironment.ShowDevEnvEndpoints = CoreEnvironment.TryGetSetting(builder, "ApiSettings:ShowDevEndpoints", false);
+CoreEnvironment.ShowSwaggerUi = CoreEnvironment.TryGetSetting(builder, "ApiSettings:ShowSwaggerUi", false);
+CoreEnvironment.RunSwagger = CoreEnvironment.TryGetSetting(builder, "ApiSettings:RunSwagger", false);
+CoreEnvironment.ServeStaticFiles = CoreEnvironment.TryGetSetting(builder, "ApiSettings:ServeStaticFiles", false);
+CoreEnvironment.Db = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:Db", "rocketrmmdb").Trim();
+CoreEnvironment.DbUser = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbUser", "rocketrmmcoreservice").Trim();
+CoreEnvironment.DbPassword = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbPassword", "wellknownpassword").Trim();
+CoreEnvironment.DbServer = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbServer", "localhost").Trim();
+CoreEnvironment.DataDir = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DataPath", $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}data").Trim();
+CoreEnvironment.CacheDir = CoreEnvironment.TryGetSetting(builder, "ApiSettings:CachePath", $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}cache").Trim();
+CoreEnvironment.PersistentDir = CoreEnvironment.TryGetSetting(builder, "ApiSettings:PersistentPath", CoreEnvironment.WorkingDir).Trim();
 CoreEnvironment.PkiDir =  $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}pki";
 CoreEnvironment.CaDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}root";
 CoreEnvironment.CaIntermediateDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}intermediate";
 CoreEnvironment.CertificatesDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}certificates";
 CoreEnvironment.CrlDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}crl";
-CoreEnvironment.WebRootPath = builder.Configuration.GetValue<string>("ApiSettings:WebRootPath").Trim() ?? $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot";
-CoreEnvironment.FrontEndUri = builder.Configuration.GetValue<string>("ApiSettings:WebUiUrl").TrimEnd('/').Trim() ?? "http://localhost";
-CoreEnvironment.KestrelHttps = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url").Trim() ?? "https://localhost:7074";
-CoreEnvironment.KestrelHttp = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Http:Url").Trim() ?? "http://localhost:7073";
+CoreEnvironment.WebRootPath = CoreEnvironment.TryGetSetting(builder, "ApiSettings:WebRootPath", $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot").Trim();
+CoreEnvironment.FrontEndUri = CoreEnvironment.TryGetSetting(builder, "ApiSettings:WebUiUrl", "http://localhost").Trim();
+CoreEnvironment.KestrelHttp = CoreEnvironment.TryGetSetting<string>(builder, "Kestrel:Endpoints:Http:Url", "http://localhost:7073").Trim();
 CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
-
+CoreEnvironment.TryGetSetting<string>(builder, "Kestrel:Endpoints:Https:Url", "http://localhost:7073").Trim();
 // Build Data/Cache directories if they don't exist
 CoreEnvironment.DataAndCacheDirectoriesBuild();
-
-// Check our CA certs and put them in memory
-//CoreEnvironment.CheckCaCerts();
-
 
 await Utilities.Crypto.GetCertificate([$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.cer"], [$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.pfx"], CoreEnvironment.CertificateType.Authentication, $"CN = \"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Auth\",O = \"RocketRMM\"");
 
@@ -84,7 +77,7 @@ if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.Ordi
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "ZeroConf:AzureAd");
 
 // CORS policy to allow the UI to access the API
-string[] corsUris = new string[] { CoreEnvironment.FrontEndUri, CoreEnvironment.KestrelHttps, CoreEnvironment.KestrelHttp } ?? [CoreEnvironment.KestrelHttps, CoreEnvironment.KestrelHttp];
+string[] corsUris = new string[] { CoreEnvironment.FrontEndUri, CoreEnvironment.KestrelHttp } ?? [CoreEnvironment.KestrelHttp];
 
 builder.Services.AddCors(p => p.AddPolicy("corsapp", builder =>
 {
@@ -192,12 +185,6 @@ app.UseCors("corsapp");
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-if (CoreEnvironment.UseHttpsRedirect)
-{
-    // Redirect HTTP to HTTPS, seems to use 307 temporary redirect
-    app.UseHttpsRedirection();
-}
 
 if (CoreEnvironment.ServeStaticFiles)
 {

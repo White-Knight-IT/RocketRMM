@@ -713,7 +713,7 @@ namespace RocketRMM
                                     Value = CoreEnvironment.ApiAccessScope
                                 }
                             ],
-                            PreAuthorizedApplications = new() { }
+                            PreAuthorizedApplications = []
                         };
                     }
                     samApp.appRoles = new List<AppRole>()
@@ -765,12 +765,8 @@ namespace RocketRMM
                     samApp.web = new Web()
                     {
                         RedirectUris = [
-                            $"{CoreEnvironment.KestrelHttp}",
-                            $"{CoreEnvironment.KestrelHttps}",
                             rocketRmmFrontEnd,
                             $"{rocketRmmFrontEnd}/bootstrap/receivegraphtoken",
-                            $"{CoreEnvironment.KestrelHttp}/bootstrap/receivegraphtoken",
-                            $"{CoreEnvironment.KestrelHttps}/bootstrap/receivegraphtoken",
                             "https://login.microsoftonline.com/common/oauth2/nativeclient",
                             "urn:ietf:wg:oauth:2.0:oob"
                         ],

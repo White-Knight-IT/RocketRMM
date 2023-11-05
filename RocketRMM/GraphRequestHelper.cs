@@ -140,7 +140,7 @@ namespace RocketRMM
 
             headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
 
-            LogsDbContext.DebugConsoleWrite($"Using {uri} as url");
+            LogsDbContext.DebugConsoleWrite($"Using {uri} as url",ConsoleColor.Cyan);
 
             string nextUrl = uri;
 
@@ -251,7 +251,7 @@ namespace RocketRMM
 
             headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
 
-            LogsDbContext.DebugConsoleWrite($"Using {uri} as url");
+            LogsDbContext.DebugConsoleWrite($"Using {uri} as url", ConsoleColor.Cyan);
 
             try
             {
@@ -326,7 +326,7 @@ namespace RocketRMM
         {
             Dictionary<string, string> headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
 
-            LogsDbContext.DebugConsoleWrite($"Using {uri} as url");
+            LogsDbContext.DebugConsoleWrite($"Using {uri} as url", ConsoleColor.Cyan);
 
             try
             {

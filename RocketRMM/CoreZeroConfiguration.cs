@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using RocketRMM.Data.Logging;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace RocketRMM
@@ -43,7 +44,7 @@ namespace RocketRMM
 
             // step one - create EntraSam SPA that the Swagger UI will use to authenticate
 
-            JsonElement samSpa = (await EntraSam.CreateSAMAuthApp($"RocketRMM UI - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Spa, domain, spaRedirectUri: new string[] { $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/swagger/oauth2-redirect.html", $"{CoreEnvironment.KestrelHttps}/swagger/oauth2-redirect.html", $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/index.html", $"{CoreEnvironment.KestrelHttps}/index.html", CoreEnvironment.FrontEndUri.TrimEnd('/'), CoreEnvironment.KestrelHttps })).EntraSam;
+            JsonElement samSpa = (await EntraSam.CreateSAMAuthApp($"RocketRMM UI - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Spa, domain, spaRedirectUri: new string[] { $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/swagger/oauth2-redirect.html", $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/index.html", CoreEnvironment.FrontEndUri.TrimEnd('/') })).EntraSam;
             string openIdClientId = samSpa.GetProperty("appId").GetString() ?? string.Empty;
             if (!openIdClientId.Equals(string.Empty))
             {
@@ -145,7 +146,12 @@ const config = {{
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Utilities.ConsoleColourWriteLine($"Exception reading CoreZeroConfiguration file: {ex.Message}");
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                {
+                    Message = $"Exception reading CoreZeroConfiguration file: {ex.Message}",
+                    Severity = "Error",
+                    API = "ImportApiZeroConf"
+                });
             }
 
             return false;
@@ -178,7 +184,12 @@ const config = {{
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Utilities.ConsoleColourWriteLine($"Exception saving CoreZeroConfiguration file: {ex.Message}");
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                {
+                    Message = $"Exception saving CoreZeroConfiguration file: {ex.Message}",
+                    Severity = "Error",
+                    API = "Save"
+                });
             }
 
             return false;

@@ -10,6 +10,7 @@ using RocketRMM.Data;
 using System.Net.NetworkInformation;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using System;
 
 namespace RocketRMM
 {
@@ -66,14 +67,39 @@ namespace RocketRMM
         internal static bool ShowSwaggerUi = false;
         internal static bool RunSwagger = false;
         internal static bool ServeStaticFiles = false;
-        internal static bool UseHttpsRedirect = true;
         internal static string? DeviceTag = string.Empty;
         internal static string? KestrelHttp;
-        internal static string? KestrelHttps;
         internal static long RunErrorCount = 0;
         internal static bool IsBoostrapped = false;
         internal static List<AccessToken> AccessTokenCache = [];
         internal static readonly string DefaultSystemUsername = "HAL";
+
+        /// <summary>
+        /// Gets supplied setting from the appsettings.json file, handles exceptions for missing/malformed settings gracefully
+        /// </summary>
+        /// <typeparam name="T">Type of object we are getting from settings</typeparam>
+        /// <param name="builder">WebApplicationBuilder used to access the settings file</param>
+        /// <param name="settingPath">Setting that we want to retrieve i.e. "ApiSettings:HttpsRedirect" </param>
+        /// <param name="defaultValue">Default value that is returned if the setting is null or has an error</param>
+        /// <returns>The setting that we requested</returns>
+        internal static T? TryGetSetting<T>(WebApplicationBuilder builder, string settingPath, T defaultValue)
+        {
+            try
+            {
+                return builder.Configuration.GetValue<T>(settingPath) ?? defaultValue;
+            }
+            catch(Exception ex)
+            {
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                {
+                    Message = $"Error getting setting: {settingPath} - instead using default value: {defaultValue} - {ex.Message}",
+                    Severity = "Error",
+                    API = "TryGetSetting"
+                });
+            }
+
+            return defaultValue;
+        }
 
         /// <summary>
         /// Build data directories including cache directories if they don't exist
@@ -90,7 +116,6 @@ namespace RocketRMM
             Utilities.ConsoleColourWriteLine($"Cache Directory: {CacheDir}", ConsoleColor.Cyan);
             Utilities.ConsoleColourWriteLine($"Data Directory: {DataDir}", ConsoleColor.Cyan);
             Utilities.ConsoleColourWriteLine($@"Persistent Directory: {PersistentDir}", ConsoleColor.Cyan);
-            Utilities.ConsoleColourWriteLine("");
         }
 
         /// <summary>
@@ -131,11 +156,18 @@ namespace RocketRMM
         }
 
         /// <summary>
-        /// Shuts down the API (terminates)
+        /// Shuts down the Core (terminates)
         /// </summary>
         /// <param name="error"></param>
-        internal static void ShutDownApi(int error = 0)
+        internal static void ShutDownCore(int error = 0)
         {
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Shutting down RocketRMM Core",
+                Severity = "Information",
+                API = "ShutDownCore"
+            });
+
             Environment.Exit(error);
         }
 
@@ -158,9 +190,14 @@ namespace RocketRMM
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                Utilities.ConsoleColourWriteLine($"Didn't create DB tables, this is expected if they already exist - server: {DbServer} - port: {DbServerPort}");
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                {
+                    Message = $"Didn't create DB tables, this is expected if they already exist - server: {DbServer} - port: {DbServerPort} - {ex.Message}",
+                    Severity = "Warning",
+                    API = "UpdateDbContexts"
+                });
             }
 
             return false;
@@ -205,9 +242,16 @@ namespace RocketRMM
             }
             catch (Exception ex)
             {
-                Utilities.ConsoleColourWriteLine($"Failed to setup Azure AD EntraSam applications using bootstrap.json, exception: {ex.Message}");
-                Utilities.ConsoleColourWriteLine("This is a fatal exception because the API cannot function without the needed EntraSam apps. Shutting API down...");
-                ShutDownApi(1);
+                RunErrorCount++;
+
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                {
+                    Message = $"Failed to setup Entra SAM applications using bootstrap.json, exception: {ex.Message}\nThis is a fatal exception because the Core cannot function without the needed SAM apps. Shutting Core down...",
+                    Severity = "Error",
+                    API = "CheckForBootstrap"
+                });
+
+                ShutDownCore(1);
             }
 
             return false;

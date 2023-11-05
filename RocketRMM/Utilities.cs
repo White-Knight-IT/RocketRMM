@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Runtime.InteropServices;
+using System;
 
 namespace RocketRMM
 {
@@ -16,9 +17,14 @@ namespace RocketRMM
         /// </summary>
         /// <param name="line">The string to write to the console</param>
         /// <param name="colour">The foreground colour of the text written to console</param>
-        public static void ConsoleColourWriteLine(string line, ConsoleColor colour = ConsoleColor.White)
+        /// <param name="addNewLine">Add a newline (\n) to the start of the line</param>
+        public static void ConsoleColourWriteLine(string line, ConsoleColor colour = ConsoleColor.White, bool addNewLine=true)
         {
             Console.ForegroundColor = colour;
+            if(addNewLine)
+            {
+                line=$"\n{line}";
+            }
             Console.WriteLine(line);
         }
 
@@ -267,7 +273,7 @@ namespace RocketRMM
                 case 2: s += "=="; break; // Two pad chars
                 case 3: s += "="; break; // One pad char
                 default:
-                    LogsDbContext.DebugConsoleWrite(string.Format("Illegal base64url string: {0}", arg));
+                    LogsDbContext.DebugConsoleWrite(string.Format("Illegal base64url string: {0}", arg),ConsoleColor.Red);
                     throw new Exception(string.Format("Illegal base64url string: {0}", arg));
             }
             return Convert.FromBase64String(s); // Standard base64 decoder
@@ -520,10 +526,25 @@ namespace RocketRMM
                         {
                             case CoreEnvironment.CertificateType.Ca:
                                 CoreEnvironment.CaRootCertPem = exportPem;
-                                X509Store rootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-                                rootStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-                                rootStore.Add(certificate);
-                                rootStore.Close();
+
+                                try
+                                {
+                                    X509Store rootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+                                    rootStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+                                    rootStore.Add(certificate);
+                                    rootStore.Close();
+                                }
+                                catch(Exception ex)
+                                {
+                                    CoreEnvironment.RunErrorCount++;
+
+                                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                                    {
+                                        Message = $"Could not load CA root certificate into Trusted Root certificate store (Windows): {ex.Message}",
+                                        Severity = "Error",
+                                        API = "GetCertificate"
+                                    });
+                                }
                                 break;
 
                             case CoreEnvironment.CertificateType.Intermediary:
@@ -531,10 +552,23 @@ namespace RocketRMM
                                 {
                                     CoreEnvironment.CurrentCaIntermediateCertPem = exportPem;
                                 }
-                                X509Store intermediaryStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-                                intermediaryStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-                                intermediaryStore.Add(certificate);
-                                intermediaryStore.Close();
+
+                                try
+                                {
+                                    X509Store intermediaryStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
+                                    intermediaryStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+                                    intermediaryStore.Add(certificate);
+                                    intermediaryStore.Close();
+                                }
+                                catch(Exception ex)
+                                {
+                                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                                    {
+                                        Message = $"Could not load CA intermediary certificate into Trusted Intermediate certificate store (Windows): {ex.Message}",
+                                        Severity = "Error",
+                                        API = "GetCertificate"
+                                    });
+                                }
                                 break;
 
                             default:

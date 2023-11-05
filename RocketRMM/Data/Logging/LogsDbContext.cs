@@ -28,11 +28,11 @@ namespace RocketRMM.Data.Logging
         /// </summary>
         /// <param name="content">Content to write to console</param>
         /// <returns>bool which indicates successful write to console</returns>
-        public static bool DebugConsoleWrite(string content)
+        public static bool DebugConsoleWrite(string content, ConsoleColor colour=ConsoleColor.White)
         {
             if (CoreEnvironment.IsDebug)
             {
-                Utilities.ConsoleColourWriteLine(content);
+                Utilities.ConsoleColourWriteLine(content,colour);
                 return true;
             }
 
@@ -66,7 +66,20 @@ namespace RocketRMM.Data.Logging
                 }
 
                 // Write to console for debug environment
-                DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}");
+                switch (logEntry.Severity.ToLower())
+                {
+                    case "error":
+                        DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}",ConsoleColor.Red);
+                        break;
+
+                    case "warning":
+                        DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Yellow);
+                        break;
+
+                    default:
+                        DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}");
+                        break;
+                }
 
                 Task<bool> task = new(() =>
                 {
@@ -105,7 +118,7 @@ namespace RocketRMM.Data.Logging
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Utilities.ConsoleColourWriteLine($"Exception writing log entry in RocketRMMLogs: {ex.Message}");
+                Utilities.ConsoleColourWriteLine($"Exception writing log entry in RocketRMMLogs: {ex.Message}\nWhat would have been logged is: [ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}");
             }
 
             return false;
