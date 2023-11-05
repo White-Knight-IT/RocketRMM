@@ -8,12 +8,16 @@ using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data.Logging;
 using RocketRMM.Data;
 using System.Net.NetworkInformation;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace RocketRMM
 {
     internal class CoreEnvironment
     {
         internal enum ProductionSecretStores { EncryptedFile };
+        internal enum CertificateType { Authentication = 10000, CodeSigning = 10001, Intermediary = 10002, Ca = 10003 };
+        internal enum OsType { Windows, MacOs, Linux, Indeterminate};
         // Roles for managing permissions
         internal static readonly string RoleOwner = "owner";
         internal static readonly string RoleAdmin = "admin";
@@ -30,10 +34,15 @@ namespace RocketRMM
         internal static string? DataDir;
         internal static string? CacheDir;
         internal static string? PkiDir;
-        internal static string? CaDir = $"{PkiDir}{Path.DirectorySeparatorChar}ca";
-        internal static string? IntermediaryDir = $"{PkiDir}{Path.DirectorySeparatorChar}intermediaries";
-        internal static string? CertificatesDir = $"{PkiDir}{Path.DirectorySeparatorChar}certificates";
-        internal static string? CrlDir = $"{PkiDir}{Path.DirectorySeparatorChar}crl";
+        internal static string? CaDir;
+        internal static string? CaIntermediateDir;
+        internal static string? CertificatesDir;
+        internal static string? CrlDir;
+        internal static string? CaRootCertPem;
+        internal static string? CurrentCaIntermediateCertPem;
+        internal static readonly string CaRootCertName = "ca";
+        internal static string CurrentCaIntermediateCertName = "intermediateca1";
+        internal static readonly string[] CaIntermediateCertNames = ["intermediateca1", "intermediateca2","intermediateca3"];
         internal static string? WebRootPath;
         internal static readonly string ApiHeader = "Api";
         internal static readonly string ApiAccessScope = "rocketrmm-api.access";
@@ -65,7 +74,6 @@ namespace RocketRMM
         internal static bool IsBoostrapped = false;
         internal static List<AccessToken> AccessTokenCache = [];
         internal static readonly string DefaultSystemUsername = "HAL";
-        internal static readonly int CaKeyPasswordLevel = 10000;  
 
         /// <summary>
         /// Build data directories including cache directories if they don't exist
@@ -76,7 +84,7 @@ namespace RocketRMM
             Directory.CreateDirectory(DataDir);
             Directory.CreateDirectory(CacheDir);
             Directory.CreateDirectory(CaDir);
-            Directory.CreateDirectory($"{IntermediaryDir}{Path.DirectorySeparatorChar}revoked");
+            Directory.CreateDirectory($"{CaIntermediateDir}{Path.DirectorySeparatorChar}revoked");
             Directory.CreateDirectory($"{CertificatesDir}{Path.DirectorySeparatorChar}revoked");
             Directory.CreateDirectory(CrlDir);
             Utilities.ConsoleColourWriteLine($"Cache Directory: {CacheDir}", ConsoleColor.Cyan);
@@ -223,6 +231,7 @@ namespace RocketRMM
 
                 if (!File.Exists(deviceTokenPath))
                 {
+                    DataAndCacheDirectoriesBuild();
                     await File.WriteAllTextAsync(deviceTokenPath, Guid.NewGuid().ToString());
                 }
 

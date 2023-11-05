@@ -1,10 +1,11 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.Tokens;
 using RocketRMM.Data.Logging;
-using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 
 namespace RocketRMM
 {
@@ -19,6 +20,27 @@ namespace RocketRMM
         {
             Console.ForegroundColor = colour;
             Console.WriteLine(line);
+        }
+
+        /// <summary>
+        /// Returns the OS this code is currently executing on
+        /// </summary>
+        public static CoreEnvironment.OsType GetOperatingSystem()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return CoreEnvironment.OsType.Windows;
+            }
+            else if(RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return CoreEnvironment.OsType.MacOs;
+            }
+            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return CoreEnvironment.OsType.Linux;
+            }
+
+            return CoreEnvironment.OsType.Indeterminate;
         }
 
         // From BIP39 english wordlist
@@ -479,37 +501,154 @@ namespace RocketRMM
                 return Encoding.UTF8.GetString(resultStream.ToArray());
             }
 
-            internal static async void CreateCertificate()
+            internal static async Task<string> GetCertificate(string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, string commonName)
             {
-                // If our CA does not exist, create it
-                if (!File.Exists($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.pfx"))
+                static async Task<string> WriteCertificate(X509Certificate2 certificate, string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, ECDsa keyPair)
                 {
-                    SubjectAlternativeNameBuilder sanBuilder = new();
-                    //sanBuilder.AddDnsName(CoreEnvironment.FrontEndUri.ToLower().Replace(@"https://", "").Replace(@"http://", ""));
-                    sanBuilder.AddDnsName(await CoreEnvironment.GetDeviceId());
-                    string commonName = $"CN=RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Root CA\nO = RocketRMM";
-                    X500DistinguishedName distinguishedName = new(commonName);
-                    var ecdsaKeyPair = ECDsa.Create(ECCurve.NamedCurves.nistP521); // generate asymmetric key pair
-                    var certificateRequest = new CertificateRequest(distinguishedName, ecdsaKeyPair, HashAlgorithmName.SHA512);
-                    var certificateExtensions = X509KeyUsageFlags.CrlSign | X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature;
-                    certificateRequest.CertificateExtensions.Add(new X509KeyUsageExtension(certificateExtensions, true));
-                    certificateRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, true, 1, true));
-                    certificateRequest.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(certificateRequest.PublicKey, false));
+                    if (!certificate.HasPrivateKey)
+                    {
+                        certificate = certificate.CopyWithPrivateKey(keyPair);
+                    }
 
-                    var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(100));
+                    foreach (string pubPath in publicPaths)
+                    {
+                        // Create Base 64 encoded CER (public key only)
+                        string exportPem = certificate.ExportCertificatePem();
+                        await File.WriteAllTextAsync(pubPath,exportPem);
 
-                    // Create PFX (PKCS #12) with private key
-                    File.WriteAllBytes($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.pfx", certificate.Export(X509ContentType.Pfx, await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey(CoreEnvironment.CaKeyPasswordLevel))));
+                        switch(certificateType)
+                        {
+                            case CoreEnvironment.CertificateType.Ca:
+                                CoreEnvironment.CaRootCertPem = exportPem;
+                                X509Store rootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+                                rootStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+                                rootStore.Add(certificate);
+                                rootStore.Close();
+                                break;
 
-                    // Create Base 64 encoded CER (public key only)
-                    string pemEncodedCertificate = @$"-----BEGIN CERTIFICATE-----
-{await Base64Encode(certificate.Export(X509ContentType.Cert), true)}
------END CERTIFICATE-----";
-                    await File.WriteAllTextAsync($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}ca.cer", pemEncodedCertificate);
-                    await File.WriteAllTextAsync($"{CoreEnvironment.FrontEndUri}{Path.DirectorySeparatorChar}pki{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}ca.cer", pemEncodedCertificate);
+                            case CoreEnvironment.CertificateType.Intermediary:
+                                if(pubPath.Contains(CoreEnvironment.CurrentCaIntermediateCertName))
+                                {
+                                    CoreEnvironment.CurrentCaIntermediateCertPem = exportPem;
+                                }
+                                X509Store intermediaryStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
+                                intermediaryStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+                                intermediaryStore.Add(certificate);
+                                intermediaryStore.Close();
+                                break;
 
+                            default:
+                                // Bundle our signing Intermediary CA cert into this certificate as well
+                                await File.AppendAllTextAsync(pubPath, $"\n{CoreEnvironment.CurrentCaIntermediateCertPem}");
+                                break;
+                        }
+                    }
+
+                    // Create PFX (PKCS #12) with private key which is encrypted by a password
+                    foreach (string secPath in secretPaths)
+                    {
+                        await File.WriteAllBytesAsync(secPath, certificate.Export(X509ContentType.Pfx, await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey((int)certificateType))));
+                    }
+
+                    return await Base64Encode(certificate.Export(X509ContentType.Cert), false);
                 }
+
+                static async Task<string?> CreateCertificate(string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, string? commonName)
+                {
+                    ECDsa ecdsaKeyPair = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+                    HashAlgorithmName hashAlgoName = HashAlgorithmName.SHA256;
+                    X509KeyUsageFlags certificateUseFlags = X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature;
+                    X509BasicConstraintsExtension basicConstraints = new(false, true, 0, true);
+                    string[] pubPaths = publicPaths;
+                    string[] secPaths = secretPaths;
+                    X509Certificate2? issuerCert = null;
+                    X509Extension? certificateRevocvationList = null;
+                    X509Certificate2? returnCertificate = null;
+                    certificateRevocvationList = CertificateRevocationListBuilder.BuildCrlDistributionPointExtension(new[] { $"{CoreEnvironment.FrontEndUri.ToLower()}/pki/crl/rocketrmm.crl" });
+
+                    switch (certificateType)
+                    {
+                        case CoreEnvironment.CertificateType.Ca:
+                            commonName = $"CN=\"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Root CA\",O=\"RocketRMM\"";
+                            ecdsaKeyPair = ECDsa.Create(ECCurve.NamedCurves.nistP521);
+                            hashAlgoName = HashAlgorithmName.SHA512;
+                            certificateUseFlags = X509KeyUsageFlags.CrlSign | X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature;
+                            basicConstraints = new X509BasicConstraintsExtension(true, true, 1, true);
+                            pubPaths = [$"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.cer", $"{CoreEnvironment.WebRootPath}{Path.DirectorySeparatorChar}pki{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.cer"];
+                            secPaths = [$"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.pfx"];
+                            break;
+
+                        case CoreEnvironment.CertificateType.Intermediary:
+                            ecdsaKeyPair = ECDsa.Create(ECCurve.NamedCurves.nistP521);
+                            hashAlgoName = HashAlgorithmName.SHA512;
+                            certificateUseFlags = X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature;
+                            basicConstraints = new X509BasicConstraintsExtension(true, true, 0, true);
+                            string password = await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey((int)CoreEnvironment.CertificateType.Ca));
+                            issuerCert = new X509Certificate2(fileName: $"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.pfx", password: await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey((int)CoreEnvironment.CertificateType.Ca)));
+                            break;
+
+                        case CoreEnvironment.CertificateType.Authentication:
+                            certificateUseFlags = X509KeyUsageFlags.KeyEncipherment | X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.NonRepudiation | X509KeyUsageFlags.KeyAgreement | X509KeyUsageFlags.DataEncipherment;
+                            issuerCert = new X509Certificate2(fileName: $"{CoreEnvironment.CaIntermediateDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CurrentCaIntermediateCertName}.pfx", password: await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey((int)CoreEnvironment.CertificateType.Intermediary)));
+                            break;
+
+                        default:
+                            if(commonName.IsNullOrEmpty())
+                            {
+                                commonName = $"CN=\"RocketRMM - {await CoreEnvironment.GetDeviceTag()}";
+                            }
+                            break;
+                    }
+
+                    X500DistinguishedName distinguishedName = new(commonName);                   
+                    var certificateRequest = new CertificateRequest(distinguishedName, ecdsaKeyPair, hashAlgoName);
+                    certificateRequest.CertificateExtensions.Add(new X509KeyUsageExtension(certificateUseFlags, true));
+                    certificateRequest.CertificateExtensions.Add(basicConstraints);
+                    certificateRequest.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(certificateRequest.PublicKey, false));
+                    certificateRequest.CertificateExtensions.Add(certificateRevocvationList);
+
+                    if(issuerCert == null)
+                    {
+                        returnCertificate = certificateRequest.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(100));
+                    }
+                    else
+                    {
+                        returnCertificate = certificateRequest.Create(issuerCert, DateTimeOffset.Now, issuerCert.NotAfter, new X509SubjectKeyIdentifierExtension(certificateRequest.PublicKey, false).SubjectKeyIdentifierBytes.ToArray());
+                    }
+
+                    if (returnCertificate != null)
+                    {
+                        return await WriteCertificate(returnCertificate, pubPaths, secPaths, certificateType, ecdsaKeyPair);
+                    }
+
+                    return null;
+                }
+
+                // If our Root CA does not exist, create it
+                if (!File.Exists($"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.pfx"))
+                {
+                    // Make sure any intermediaries do not exist if we don't have a root CA
+                    foreach(string filePath in Directory.EnumerateFiles(CoreEnvironment.CaIntermediateDir))
+                    {
+                        File.Delete(filePath);
+                    }
+                    _= await CreateCertificate([""], [""], CoreEnvironment.CertificateType.Ca,null);
+                }
+
+                // If any of our Intermediate CAs do not exist, create them
+                foreach (string filename in CoreEnvironment.CaIntermediateCertNames)
+                {
+                    if (!File.Exists($"{CoreEnvironment.CaIntermediateDir}{Path.DirectorySeparatorChar}{filename}.pfx"))
+                    {
+                        //$"CN=\"RocketRMM - {CoreEnvironment.GetDeviceTag().Result} - Intermediate CA\",O = \"RocketRMM\"";
+
+                        _ = await CreateCertificate([$"{CoreEnvironment.CaIntermediateDir}{Path.DirectorySeparatorChar}{filename}.cer", $"{CoreEnvironment.WebRootPath}{Path.DirectorySeparatorChar}pki{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}{filename}.cer"], [$"{CoreEnvironment.CaIntermediateDir}{Path.DirectorySeparatorChar}{filename}.pfx"], CoreEnvironment.CertificateType.Intermediary, $"CN=\"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Intermediate CA{filename[^1..]}\",O=\"RocketRMM\"");
+                    }
+                }
+
+                return await CreateCertificate(publicPaths, secretPaths, certificateType, commonName);
             }
         }
+
     }
 }

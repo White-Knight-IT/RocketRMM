@@ -45,18 +45,24 @@ CoreEnvironment.DataDir = builder.Configuration.GetValue<string>("ApiSettings:Da
 CoreEnvironment.CacheDir = builder.Configuration.GetValue<string>("ApiSettings:CachePath").Trim() ?? $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}cache";
 CoreEnvironment.PersistentDir = builder.Configuration.GetValue<string>("ApiSettings:PersistentPath").Trim() ?? CoreEnvironment.WorkingDir;
 CoreEnvironment.PkiDir =  $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}pki";
-CoreEnvironment.CaDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca";
-CoreEnvironment.IntermediaryDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}intermediaries";
+CoreEnvironment.CaDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}root";
+CoreEnvironment.CaIntermediateDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}intermediate";
 CoreEnvironment.CertificatesDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}certificates";
-// Build Data/Cache directories if they don't exist
-CoreEnvironment.DataAndCacheDirectoriesBuild();
+CoreEnvironment.CrlDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}crl";
 CoreEnvironment.WebRootPath = builder.Configuration.GetValue<string>("ApiSettings:WebRootPath").Trim() ?? $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot";
 CoreEnvironment.FrontEndUri = builder.Configuration.GetValue<string>("ApiSettings:WebUiUrl").TrimEnd('/').Trim() ?? "http://localhost";
-CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
 CoreEnvironment.KestrelHttps = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Https:Url").Trim() ?? "https://localhost:7074";
 CoreEnvironment.KestrelHttp = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Http:Url").Trim() ?? "http://localhost:7073";
+CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
 
-Utilities.Crypto.CreateCertificate();
+// Build Data/Cache directories if they don't exist
+CoreEnvironment.DataAndCacheDirectoriesBuild();
+
+// Check our CA certs and put them in memory
+//CoreEnvironment.CheckCaCerts();
+
+
+await Utilities.Crypto.GetCertificate([$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.cer"], [$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.pfx"], CoreEnvironment.CertificateType.Authentication, $"CN = \"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Auth\",O = \"RocketRMM\"");
 
 // We skip a lot of the setup/config stuff if it is a DB migration
 if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
