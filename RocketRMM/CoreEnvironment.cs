@@ -275,7 +275,11 @@ namespace RocketRMM
 
                 if (!File.Exists(deviceTokenPath))
                 {
-                    DataAndCacheDirectoriesBuild();
+                    if(!Directory.Exists(PersistentDir))
+                    {
+                        DataAndCacheDirectoriesBuild();
+                    }
+
                     await File.WriteAllTextAsync(deviceTokenPath, Guid.NewGuid().ToString());
                 }
 

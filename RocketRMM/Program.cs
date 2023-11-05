@@ -39,6 +39,7 @@ CoreEnvironment.Db = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSetti
 CoreEnvironment.DbUser = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbUser", "rocketrmmcoreservice").Trim();
 CoreEnvironment.DbPassword = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbPassword", "wellknownpassword").Trim();
 CoreEnvironment.DbServer = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbServer", "localhost").Trim();
+CoreEnvironment.DbServerPort = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DbSettings:DbServerPort", "3306").Trim();
 CoreEnvironment.DataDir = CoreEnvironment.TryGetSetting(builder, "ApiSettings:DataPath", $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}data").Trim();
 CoreEnvironment.CacheDir = CoreEnvironment.TryGetSetting(builder, "ApiSettings:CachePath", $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}cache").Trim();
 CoreEnvironment.PersistentDir = CoreEnvironment.TryGetSetting(builder, "ApiSettings:PersistentPath", CoreEnvironment.WorkingDir).Trim();
@@ -49,22 +50,24 @@ CoreEnvironment.CertificatesDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySepar
 CoreEnvironment.CrlDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}crl";
 CoreEnvironment.WebRootPath = CoreEnvironment.TryGetSetting(builder, "ApiSettings:WebRootPath", $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot").Trim();
 CoreEnvironment.FrontEndUri = CoreEnvironment.TryGetSetting(builder, "ApiSettings:WebUiUrl", "http://localhost").Trim();
-CoreEnvironment.KestrelHttp = CoreEnvironment.TryGetSetting<string>(builder, "Kestrel:Endpoints:Http:Url", "http://localhost:7073").Trim();
-CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
-CoreEnvironment.TryGetSetting<string>(builder, "Kestrel:Endpoints:Https:Url", "http://localhost:7073").Trim();
-// Build Data/Cache directories if they don't exist
-CoreEnvironment.DataAndCacheDirectoriesBuild();
-
-await Utilities.Crypto.GetCertificate([$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.cer"], [$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.pfx"], CoreEnvironment.CertificateType.Authentication, $"CN = \"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Auth\",O = \"RocketRMM\"");
+CoreEnvironment.KestrelHttp = CoreEnvironment.TryGetSetting(builder, "Kestrel:Endpoints:Http:Url", "http://localhost:8088").Trim();
 
 // We skip a lot of the setup/config stuff if it is a DB migration
 if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
 {
+    // Build Data/Cache directories if they don't exist
+    CoreEnvironment.DataAndCacheDirectoriesBuild();
+
+    // Get the identifying tag of this instance
+    CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
+
     // Update DB if new manifest or create if not exist
     await CoreEnvironment.UpdateDbContexts();
 
     // These bytes form the basis of persistent but importantly unique seed entropy throughout crypto functions in this API
     await CoreEnvironment.GetEntropyBytes();
+
+    await Utilities.Crypto.GetCertificate([$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.cer"], [$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.pfx"], CoreEnvironment.CertificateType.Authentication, $"CN = \"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Auth\",O = \"RocketRMM\"");
 
     // We will import our ApiZeroConf settings else try find bootstrap app to build from
     while (!CoreZeroConfiguration.ImportApiZeroConf(ref builder))
