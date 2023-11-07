@@ -28,31 +28,6 @@ namespace RocketRMM
         }
 
         /// <summary>
-        /// Returns the OS this code is currently executing on
-        /// </summary>
-        public static CoreEnvironment.OsType GetOperatingSystem()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return CoreEnvironment.OsType.Windows;
-            }
-            else if(RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                return CoreEnvironment.OsType.MacOs;
-            }
-            else if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return CoreEnvironment.OsType.Linux;
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
-            {
-                return CoreEnvironment.OsType.FreeBsd;
-            }
-            
-            return CoreEnvironment.OsType.Indeterminate;
-        }
-
-        /// <summary>
         /// Takes raw JSON and a designated type and it converts the JSON into a list of objects of the given type
         /// </summary>
         /// <typeparam name="type">Will parse into a list of objects of this type</typeparam>
@@ -557,7 +532,7 @@ namespace RocketRMM
 
                                 try
                                 {
-                                    if (GetOperatingSystem() == CoreEnvironment.OsType.Windows)
+                                    if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Windows)
                                     {
                                         // This will fail if not running elevated (as admin)
                                         X509Store rootStore = new(StoreName.Root, StoreLocation.LocalMachine);
@@ -573,7 +548,7 @@ namespace RocketRMM
                                         });
 
                                     }
-                                    else if(GetOperatingSystem() == CoreEnvironment.OsType.Linux)
+                                    else if(CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Linux)
                                     {
                                         // Put cert in /usr/local/share/ca-certificates
                                         await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{CoreEnvironment.CaRootCertName}.crt", exportPem);
@@ -609,7 +584,7 @@ namespace RocketRMM
 
                                 try
                                 {
-                                    if (GetOperatingSystem() == CoreEnvironment.OsType.Windows)
+                                    if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Windows)
                                     {
                                         // This will fail if not running elevated (as admin)
                                         X509Store intermediaryStore = new(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
@@ -625,7 +600,7 @@ namespace RocketRMM
                                             API = "WriteCertificate"
                                         });
                                     }
-                                    else if (GetOperatingSystem() == CoreEnvironment.OsType.Linux)
+                                    else if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Linux)
                                     {
                                         string filename = pubPath.Split($"{Path.DirectorySeparatorChar}")[^1..][0].Replace(".cer", ".crt");
                                         // Put cert in /usr/local/share/ca-certificates

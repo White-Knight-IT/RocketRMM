@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data.Logging;
 using RocketRMM.Data;
 using MySqlConnector;
+using System.Runtime.InteropServices;
 
 namespace RocketRMM
 {
@@ -96,6 +97,31 @@ namespace RocketRMM
             }
 
             return defaultValue;
+        }
+
+        /// <summary>
+        /// Returns the OS this code is currently executing on
+        /// </summary>
+        public static CoreEnvironment.OsType GetOperatingSystem()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return CoreEnvironment.OsType.Windows;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return CoreEnvironment.OsType.MacOs;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return CoreEnvironment.OsType.Linux;
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
+            {
+                return CoreEnvironment.OsType.FreeBsd;
+            }
+
+            return CoreEnvironment.OsType.Indeterminate;
         }
 
         /// <summary>

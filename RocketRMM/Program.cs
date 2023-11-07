@@ -8,6 +8,7 @@ using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using RocketRMM;
+using Microsoft.OpenApi.Extensions;
 
 Utilities.ConsoleColourWriteLine($@"                                                                    /\
  _____                _           _    _____   __  __  __  __      |--|
@@ -54,6 +55,7 @@ CoreEnvironment.KestrelHttp = CoreEnvironment.TryGetSetting(builder, "Kestrel:En
 // We skip a lot of the setup/config stuff if it is a DB migration
 if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
 {
+    Utilities.ConsoleColourWriteLine($"Detected platform {CoreEnvironment.GetOperatingSystem().GetDisplayName()}");
     // Build Data/Cache directories if they don't exist
     CoreEnvironment.DataAndCacheDirectoriesBuild();
 
