@@ -25,8 +25,7 @@ Created by Ian Harris (@knightian) - White Knight IT - https://whiteknightit.com
 
 Licensed under the AGPL-3.0 License + Security License Addendum
 
-v{CoreEnvironment.CoreVersion}
-", ConsoleColor.DarkGray);
+v{CoreEnvironment.CoreVersion}", ConsoleColor.DarkGray);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +61,7 @@ if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.Ordi
     CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
 
     // Update DB if new manifest or create if not exist
-    await CoreEnvironment.UpdateDbContexts();
+    CoreEnvironment.UpdateDbContexts();
 
     // These bytes form the basis of persistent but importantly unique seed entropy throughout crypto functions in this API
     await CoreEnvironment.GetEntropyBytes();
@@ -80,7 +79,7 @@ if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.Ordi
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "ZeroConf:AzureAd");
 
 // CORS policy to allow the UI to access the API
-string[] corsUris = new string[] { CoreEnvironment.FrontEndUri, CoreEnvironment.KestrelHttp } ?? [CoreEnvironment.KestrelHttp];
+string[] corsUris = [CoreEnvironment.FrontEndUri, CoreEnvironment.KestrelHttp];
 
 builder.Services.AddCors(p => p.AddPolicy("corsapp", builder =>
 {
@@ -123,12 +122,12 @@ if (CoreEnvironment.ShowDevEnvEndpoints)
     CoreEnvironment.ApiRouteVersions.Add(double.Parse(CoreEnvironment.ApiDev.ToString()));
 }
 
+// Check if the app is running as debug
 if (CoreEnvironment.IsDebug)
 {
     Console.ForegroundColor = ConsoleColor.Yellow;
     Utilities.ConsoleColourWriteLine("######################## RocketRMM is running in DEBUG context", ConsoleColor.Yellow);
 
-    // In dev env we can get secrets from local environment (use `dotnet user-secrets` tool to safely store local secrets)
     if (builder.Environment.IsDevelopment())
     {
         Utilities.ConsoleColourWriteLine("######################## RocketRMM is running from a development environment", ConsoleColor.Yellow);
@@ -161,11 +160,11 @@ builder.Services.AddSwaggerGen(customSwagger => {
         {
             AuthorizationCode = new OpenApiOAuthFlow
             {
-                AuthorizationUrl = new Uri(builder.Configuration["ZeroConf:AzureAd:AuthorizationUrl"]),
-                TokenUrl = new Uri(builder.Configuration["ZeroConf:AzureAd:TokenUrl"]),
+                AuthorizationUrl = CoreEnvironment.TryGetSetting(builder,"ZeroConf:AzureAd:AuthorizationUrl",new Uri("")),
+                TokenUrl = CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:TokenUrl", new Uri("")),
                 Scopes = new Dictionary<string, string>
                 {
-                    { builder.Configuration["ZeroConf:AzureAd:ApiScope"], builder.Configuration["ZeroConf:AzureAd:Scopes"]}
+                    { CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:ApiScope", "There's no scope here"), CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:Scopes", "Here, there's no scope")}
                 }
             }
         }
@@ -177,7 +176,7 @@ builder.Services.AddSwaggerGen(customSwagger => {
             {
                 Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
             },
-            new[] { builder.Configuration["ZeroConf:AzureAd:ApiScope"] }
+            new[] { CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:ApiScope", "There's no scope here") }
         }
     });
 });
@@ -185,7 +184,6 @@ builder.Services.AddSwaggerGen(customSwagger => {
 var app = builder.Build();
 
 app.UseCors("corsapp");
-
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -247,6 +245,6 @@ if (CoreEnvironment.RunSwagger)
     }
 }
 
-//await new FfppLogs().LogDb.LogRequest("Test Message", "", "Information", "M365B654613.onmicrosoft.com", "ThisIsATest");
+// We can do whatever we want to do here, and then the app just runs and listens for HTTP requests once app.Run() is called.
 
 app.Run();

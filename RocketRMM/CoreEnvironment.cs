@@ -7,10 +7,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using RocketRMM.Data.Logging;
 using RocketRMM.Data;
-using System.Net.NetworkInformation;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.AspNetCore.Razor.TagHelpers;
-using System;
+using MySqlConnector;
 
 namespace RocketRMM
 {
@@ -18,7 +15,7 @@ namespace RocketRMM
     {
         internal enum ProductionSecretStores { EncryptedFile };
         internal enum CertificateType { Authentication = 10000, CodeSigning = 10001, Intermediary = 10002, Ca = 10003 };
-        internal enum OsType { Windows, MacOs, Linux, Indeterminate};
+        internal enum OsType { Windows, MacOs, Linux, FreeBsd, Indeterminate};
         // Roles for managing permissions
         internal static readonly string RoleOwner = "owner";
         internal static readonly string RoleAdmin = "admin";
@@ -125,7 +122,7 @@ namespace RocketRMM
         /// <returns></returns>
         internal static async Task<byte[]> GetDeviceIdGeneratedKey(int level = 0, int iterations = 183029)
         {
-            byte[] hmacSalt = SHA512.HashData(Encoding.UTF8.GetBytes($"saltisnot{await GetDeviceId()}secretsquirell"));
+            byte[] hmacSalt = SHA512.HashData(Encoding.UTF8.GetBytes($"saltisnot{await GetDeviceId()}secretsquirrel"));
 
             try
             {
@@ -174,37 +171,51 @@ namespace RocketRMM
         /// <summary>
         /// Update DB with latest migrations
         /// </summary>
-        internal static async Task<bool> UpdateDbContexts()
+        internal static void UpdateDbContexts()
         {
-            try
+            int dbConnectAttempt = 0;
+            int maxAttempts = 12;
+
+            while (dbConnectAttempt < maxAttempts)
             {
-                using (LogsDbContext logsDb = new())
+                try
                 {
-                    await logsDb.Database.MigrateAsync();
+                    using LogsDbContext logsDb = new();
+                    logsDb.Database.Migrate();
+
+                    using UserProfilesDbContext userProfilesDb = new();
+                    userProfilesDb.Database.Migrate();
                 }
-
-                using (UserProfilesDbContext userProfilesDb = new())
+                catch (MySqlException ex)
                 {
-                    await userProfilesDb.Database.MigrateAsync();
+                    dbConnectAttempt++;
+
+                    if (ex.ErrorCode == MySqlErrorCode.TableExists)
+                    {
+                        break;
+                    }
+                    else if(ex.ErrorCode == MySqlErrorCode.UnableToConnectToHost)
+                    {
+                        Utilities.ConsoleColourWriteLine($"Error with DB server on {DbServer}:{DbServerPort}, waiting 5 seconds and trying again [{dbConnectAttempt}/{maxAttempts}].\nException: {ex.Message}", ConsoleColor.Yellow);
+                        Thread.CurrentThread.Join(5000);
+
+                        if (dbConnectAttempt >= maxAttempts)
+                        {
+                            Utilities.ConsoleColourWriteLine($"Error with DB server on {DbServer}:{DbServerPort}, This is a fatal error, shutting down RocketRMM Core.\nException: {ex.Message}", ConsoleColor.Yellow);
+                            ShutDownCore(420);
+                        }
+                    }
+                    else
+                    { 
+                        Utilities.ConsoleColourWriteLine($"Error with DB server on {DbServer}:{DbServerPort}, This is a fatal error, shutting down RocketRMM Core.\nException: {ex.Message}", ConsoleColor.Yellow);
+                        ShutDownCore(911);
+                    }
                 }
-
-                return true;
             }
-            catch (Exception ex)
-            {
-                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                {
-                    Message = $"Didn't create DB tables, this is expected if they already exist - server: {DbServer} - port: {DbServerPort} - {ex.Message}",
-                    Severity = "Warning",
-                    API = "UpdateDbContexts"
-                });
-            }
-
-            return false;
         }
 
         /// <summary>
-        /// 
+        /// Gets an array containing 4098 crypto random bytes, these bytes are also stored in a file on disk so they are persistant and constant once created.
         /// </summary>
         /// <returns></returns>
         internal static async Task<byte[]> GetEntropyBytes()
@@ -212,7 +223,7 @@ namespace RocketRMM
             string entropyBytesPath = $"{PersistentDir}{Path.DirectorySeparatorChar}unique.entropy.bytes";
             if (!File.Exists(entropyBytesPath))
             {
-                await File.WriteAllTextAsync(entropyBytesPath, await Utilities.RandomByteString(4098,true));
+                await File.WriteAllTextAsync(entropyBytesPath, await Utilities.Crypto.RandomByteString(4098,true));
             }
 
             return await Utilities.Base64Decode(await File.ReadAllTextAsync(entropyBytesPath));

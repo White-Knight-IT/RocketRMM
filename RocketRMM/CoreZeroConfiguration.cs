@@ -79,7 +79,7 @@ namespace RocketRMM
 
                     _ = zeroConf.Save();
                     string bootstrapPath = $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}bootstrap.json";
-                    await File.WriteAllTextAsync(bootstrapPath, await Utilities.RandomByteString());
+                    await File.WriteAllTextAsync(bootstrapPath, await Utilities.Crypto.RandomByteString());
                     File.Delete(bootstrapPath);
 
                     // Setup our front end config file
