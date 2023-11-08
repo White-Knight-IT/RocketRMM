@@ -512,6 +512,80 @@ namespace RocketRMM
             /// <returns>Base64 encoded certificate (PEM)</returns>
             internal static async Task<string> GetCertificate(string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, string commonName)
             {
+                // This will fail if not runing as elevated
+                static async void PutCertificateInTrustStore(X509Certificate2 certificate, CoreEnvironment.CertificateType certificateType, string fileNameNoExtension)
+                {
+                    if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Windows)
+                    {
+                        X509Store rootStore;
+
+                        switch (certificateType)
+                        {
+                            case CoreEnvironment.CertificateType.Ca:
+                                break;
+
+                            case CoreEnvironment.CertificateType.Intermediary:
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        try
+                        {
+                            rootStore = new(StoreName.Root, StoreLocation.LocalMachine);
+                            rootStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+                            rootStore.Add(certificate);
+                            rootStore.Close();
+
+                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            {
+                                Message = $"Root CA certificate {CoreEnvironment.CaRootCertName}.cer placed into Windows local machine trusted root store",
+                                Severity = "Information",
+                                API = "WriteCertificate"
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            CoreEnvironment.RunErrorCount++;
+
+                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            {
+                                Message = $"Could not load CA root certificate into trusted root certificate store (Windows), this is acceptable if not running elevated (as admin): {ex.Message}",
+                                Severity = "Error",
+                                API = "WriteCertificate"
+                            });
+                        }
+
+                    }
+                    else if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Linux)
+                    {
+                        try
+                        {
+                            // Put cert in /usr/local/share/ca-certificates
+                            await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{CoreEnvironment.CaRootCertName}.crt", exportPem);
+                            // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
+                            await Cli.Wrap("update-ca-certificates").ExecuteAsync();
+
+                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            {
+                                Message = $"Root CA certificate {CoreEnvironment.CaRootCertName}.crt placed into Linux trusted CA store",
+                                Severity = "Information",
+                                API = "WriteCertificate"
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            {
+                                Message = $"Could not load Root CA certificate into Linux trusted CA store: {ex.Message}",
+                                Severity = "Error",
+                                API = "WriteCertificate"
+                            });
+                        }
+                    }
+                }
+
                 static async Task<string> WriteCertificate(X509Certificate2 certificate, string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, ECDsa keyPair)
                 {
                     if (!certificate.HasPrivateKey)
@@ -523,107 +597,18 @@ namespace RocketRMM
                     {
                         // Create Base 64 encoded CER (public key only)
                         string exportPem = certificate.ExportCertificatePem();
-                        await File.WriteAllTextAsync(pubPath,exportPem);
+                        await File.WriteAllTextAsync(pubPath, exportPem);
 
-                        switch(certificateType)
+                        switch (certificateType)
                         {
                             case CoreEnvironment.CertificateType.Ca:
                                 CoreEnvironment.CaRootCertPem = exportPem;
-
-                                try
-                                {
-                                    if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Windows)
-                                    {
-                                        // This will fail if not running elevated (as admin)
-                                        X509Store rootStore = new(StoreName.Root, StoreLocation.LocalMachine);
-                                        rootStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-                                        rootStore.Add(certificate);
-                                        rootStore.Close();
-
-                                        _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                                        {
-                                            Message = $"Root CA certificate {CoreEnvironment.CaRootCertName}.cer placed in Windows local machine trusted root store",
-                                            Severity = "Information",
-                                            API = "WriteCertificate"
-                                        });
-
-                                    }
-                                    else if(CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Linux)
-                                    {
-                                        // Put cert in /usr/local/share/ca-certificates
-                                        await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{CoreEnvironment.CaRootCertName}.crt", exportPem);
-                                        // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
-                                        await Cli.Wrap("update-ca-certificates").ExecuteAsync();
-
-                                        _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                                        {
-                                            Message = $"Root CA certificate {CoreEnvironment.CaRootCertName}.crt placed in Linux trusted CA store",
-                                            Severity = "Information",
-                                            API = "WriteCertificate"
-                                        });
-                                    }
-                                }
-                                catch(Exception ex)
-                                {
-                                    CoreEnvironment.RunErrorCount++;
-
-                                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                                    {
-                                        Message = $"Could not load CA root certificate into Trusted Root certificate store (Windows), this is acceptable if not running elevated (as admin): {ex.Message}",
-                                        Severity = "Error",
-                                        API = "WriteCertificate"
-                                    });
-                                }
                                 break;
 
                             case CoreEnvironment.CertificateType.Intermediary:
                                 if(pubPath.Contains(CoreEnvironment.CurrentCaIntermediateCertName))
                                 {
                                     CoreEnvironment.CurrentCaIntermediateCertPem = exportPem;
-                                }
-
-                                try
-                                {
-                                    if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Windows)
-                                    {
-                                        // This will fail if not running elevated (as admin)
-                                        X509Store intermediaryStore = new(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-                                        intermediaryStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-                                        intermediaryStore.Add(certificate);
-                                        intermediaryStore.Close();
-                                        string filename = pubPath.Split($"{Path.DirectorySeparatorChar}")[^1..][0];
-
-                                        _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                                        {
-                                            Message = $"Intermediate CA certificate {filename} placed in Windows local machine trusted intermediate store",
-                                            Severity = "Information",
-                                            API = "WriteCertificate"
-                                        });
-                                    }
-                                    else if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Linux)
-                                    {
-                                        string filename = pubPath.Split($"{Path.DirectorySeparatorChar}")[^1..][0].Replace(".cer", ".crt");
-                                        // Put cert in /usr/local/share/ca-certificates
-                                        await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{filename}", exportPem);
-                                        // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
-                                        await Cli.Wrap("update-ca-certificates").ExecuteAsync();
-
-                                        _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                                        {
-                                            Message = $"Intermediate CA certificate {filename} placed in Linux trusted CA store",
-                                            Severity = "Information",
-                                            API = "WriteCertificate"
-                                        });
-                                    }
-                                }
-                                catch(Exception ex)
-                                {
-                                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
-                                    {
-                                        Message = $"Could not load CA intermediary certificate into Trusted Intermediate certificate store (Windows), this is acceptable if not running elevated (as admin): {ex.Message}",
-                                        Severity = "Error",
-                                        API = "WriteCertificate"
-                                    });
                                 }
                                 break;
 

@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using RocketRMM;
 using Microsoft.OpenApi.Extensions;
+using RocketRMM.Data.Logging;
 
 Utilities.ConsoleColourWriteLine($@"                                                                    /\
  _____                _           _    _____   __  __  __  __      |--|
@@ -162,8 +163,8 @@ builder.Services.AddSwaggerGen(customSwagger => {
         {
             AuthorizationCode = new OpenApiOAuthFlow
             {
-                AuthorizationUrl = CoreEnvironment.TryGetSetting(builder,"ZeroConf:AzureAd:AuthorizationUrl",new Uri("")),
-                TokenUrl = CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:TokenUrl", new Uri("")),
+                AuthorizationUrl = CoreEnvironment.TryGetSetting(builder,"ZeroConf:AzureAd:AuthorizationUrl",new Uri("http://localhost")),
+                TokenUrl = CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:TokenUrl", new Uri("http://localhost")),
                 Scopes = new Dictionary<string, string>
                 {
                     { CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:ApiScope", "There's no scope here"), CoreEnvironment.TryGetSetting(builder, "ZeroConf:AzureAd:Scopes", "Here, there's no scope")}
@@ -248,5 +249,12 @@ if (CoreEnvironment.RunSwagger)
 }
 
 // We can do whatever we want to do here, and then the app just runs and listens for HTTP requests once app.Run() is called.
+
+_ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+{
+    Message = "RocketRMM Core is started and listening for HTTP requests.",
+    Severity = "Information",
+    API = "Program"
+});
 
 app.Run();
