@@ -595,7 +595,6 @@ namespace RocketRMM
                             // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
                             Process process = new();
                             process.StartInfo.FileName = "/usr/sbin/update-ca-certificates";
-                            process.StartInfo.UseShellExecute = true;
                             await process.WaitForExitAsync();
 
                             if (process.ExitCode == 0)
