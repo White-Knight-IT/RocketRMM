@@ -105,7 +105,13 @@ namespace RocketRMM
                 else if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                 {
                     // Sleep 1 second if we get a 429 and retry
-                    Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to GetGraphToken, waiting 1 second and retrying...");
+                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                    {
+                        Message = "Got a 429 too many requests to GetGraphToken, waiting 1 second and retrying...",
+                        Severity = "Debug",
+                        API = "GetGraphToken"
+                    });
+
                     Thread.CurrentThread.Join(1020);
                     return await GetGraphToken(tenantId, asApp, appId, refreshToken, scope, returnRefresh);
                 }
@@ -140,7 +146,12 @@ namespace RocketRMM
 
             headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
 
-            LogsDbContext.DebugConsoleWrite($"Using {uri} as url",ConsoleColor.Cyan);
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Using {uri} as url",
+                Severity = "Debug",
+                API = "NewGraphGetRequest"
+            });
 
             string nextUrl = uri;
 
@@ -203,7 +214,13 @@ namespace RocketRMM
                         else if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                         {
                             // Sleep 1 second if we get a 429 and retry
-                            Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
+                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            {
+                                Message = $"Got a 429 too many requests to {uri}, waiting 1 second and retrying...",
+                                Severity = "Debug",
+                                API = "NewGraphGetRequest"
+                            });
+
                             Thread.CurrentThread.Join(1020);
                             return await NewGraphGetRequest(uri, tenantId, scope, asApp, noPagination);
                         }
@@ -211,12 +228,14 @@ namespace RocketRMM
                         {
                             CoreEnvironment.RunErrorCount++;
                             nextUrl = string.Empty;
+
                             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
                                 Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode}. Uri: {uri}",
                                 Severity = "Error",
                                 API = "NewGraphGetRequest"
                             });
+
                             throw new BadHttpRequestException("We did not get a http ok response from the upstream (graph)");
                         }
 
@@ -251,7 +270,12 @@ namespace RocketRMM
 
             headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
 
-            LogsDbContext.DebugConsoleWrite($"Using {uri} as url", ConsoleColor.Cyan);
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Using {uri} as url",
+                Severity = "Debug",
+                API = "NewGraphGetRequestBytes"
+            });
 
             try
             {
@@ -326,7 +350,12 @@ namespace RocketRMM
         {
             Dictionary<string, string> headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
 
-            LogsDbContext.DebugConsoleWrite($"Using {uri} as url", ConsoleColor.Cyan);
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Using {uri} as url",
+                Severity = "Debug",
+                API = "NewGraphPostRequest"
+            });
 
             try
             {

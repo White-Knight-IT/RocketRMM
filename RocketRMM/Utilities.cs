@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Runtime.InteropServices;
 using CliWrap;
+using System.Reflection.Metadata;
 
 namespace RocketRMM
 {
@@ -123,8 +124,15 @@ namespace RocketRMM
                 case 2: s += "=="; break; // Two pad chars
                 case 3: s += "="; break; // One pad char
                 default:
-                    LogsDbContext.DebugConsoleWrite(string.Format("Illegal base64url string: {0}", arg),ConsoleColor.Red);
-                    throw new Exception(string.Format("Illegal base64url string: {0}", arg));
+
+                    _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                    {
+                        Message = $"Illegal base64url string: {arg}",
+                        Severity = "Error",
+                        API = "Base64UrlDecode"
+                    });
+
+                    throw new Exception($"Illegal base64url string: {arg}");
             }
             return Convert.FromBase64String(s); // Standard base64 decoder
         }
@@ -515,16 +523,22 @@ namespace RocketRMM
                 // This will fail if not runing as elevated
                 static async void PutCertificateInTrustStore(X509Certificate2 certificate, CoreEnvironment.CertificateType certificateType, string fileNameNoExtension)
                 {
+                    string logMessage = $"Root CA certificate {fileNameNoExtension}.cer placed into Windows local machine trusted root certificate store";
+                    string logErrorMessage = $"Could not load CA root certificate into trusted root certificate store (Windows), this is acceptable if not running elevated (as admin): ";
+
                     if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Windows)
                     {
-                        X509Store rootStore;
+                        X509Store certStore = new(StoreName.Root, StoreLocation.LocalMachine);
 
                         switch (certificateType)
                         {
-                            case CoreEnvironment.CertificateType.Ca:
+                            case CoreEnvironment.CertificateType.Ca: 
                                 break;
 
                             case CoreEnvironment.CertificateType.Intermediary:
+                                certStore = new(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
+                                logMessage = $"Intermidiate CA certificate {fileNameNoExtension}.cer placed into Windows local machine trusted intermediary certificate store";
+                                logErrorMessage = $"Could not load CA intermediate certificate into trusted intermediary certificate store (Windows), this is acceptable if not running elevated (as admin): ";
                                 break;
 
                             default:
@@ -533,14 +547,14 @@ namespace RocketRMM
 
                         try
                         {
-                            rootStore = new(StoreName.Root, StoreLocation.LocalMachine);
-                            rootStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-                            rootStore.Add(certificate);
-                            rootStore.Close();
+
+                            certStore.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+                            certStore.Add(certificate);
+                            certStore.Close();
 
                             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
-                                Message = $"Root CA certificate {CoreEnvironment.CaRootCertName}.cer placed into Windows local machine trusted root store",
+                                Message = logMessage,
                                 Severity = "Information",
                                 API = "WriteCertificate"
                             });
@@ -551,7 +565,7 @@ namespace RocketRMM
 
                             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
-                                Message = $"Could not load CA root certificate into trusted root certificate store (Windows), this is acceptable if not running elevated (as admin): {ex.Message}",
+                                Message = logErrorMessage + ex.Message,
                                 Severity = "Error",
                                 API = "WriteCertificate"
                             });
@@ -560,16 +574,32 @@ namespace RocketRMM
                     }
                     else if (CoreEnvironment.GetOperatingSystem() == CoreEnvironment.OsType.Linux)
                     {
+                        switch (certificateType)
+                        {
+                            case CoreEnvironment.CertificateType.Ca:
+                                logMessage = $"Root CA certificate {fileNameNoExtension}.crt placed into Linux trusted CA store";
+                                logErrorMessage = $"Could not load root CA certificate into Linux trusted CA store: ";
+                                break;
+
+                            case CoreEnvironment.CertificateType.Intermediary:
+                                logMessage = $"Intermediate CA certificate {fileNameNoExtension}.crt placed into Linux trusted CA store";
+                                logErrorMessage = $"Could not load intermediate CA certificate into Linux trusted CA store, this is acceptable if not running elevated (as root): ";
+                                break;
+
+                            default:
+                                break;
+                        }
+
                         try
                         {
                             // Put cert in /usr/local/share/ca-certificates
-                            await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{CoreEnvironment.CaRootCertName}.crt", exportPem);
+                            await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{fileNameNoExtension}.crt", certificate.ExportCertificatePem());
                             // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
                             await Cli.Wrap("update-ca-certificates").ExecuteAsync();
 
                             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
-                                Message = $"Root CA certificate {CoreEnvironment.CaRootCertName}.crt placed into Linux trusted CA store",
+                                Message = logMessage,
                                 Severity = "Information",
                                 API = "WriteCertificate"
                             });
@@ -578,7 +608,7 @@ namespace RocketRMM
                         {
                             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
-                                Message = $"Could not load Root CA certificate into Linux trusted CA store: {ex.Message}",
+                                Message = logErrorMessage + ex.Message,
                                 Severity = "Error",
                                 API = "WriteCertificate"
                             });
@@ -586,11 +616,18 @@ namespace RocketRMM
                     }
                 }
 
-                static async Task<string> WriteCertificate(X509Certificate2 certificate, string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, ECDsa keyPair)
+                static async Task<string> WriteCertificate(X509Certificate2 certificate, string[] publicPaths, string[] secretPaths, CoreEnvironment.CertificateType certificateType, ECDsa keyPair, bool import=false)
                 {
                     if (!certificate.HasPrivateKey)
                     {
                         certificate = certificate.CopyWithPrivateKey(keyPair);
+                    }
+
+                    if(import)
+                    {
+                        string filenameNoExtension;
+
+                        PutCertificateInTrustStore(certificate, certificateType, publicPaths[0].Split(Path.DirectorySeparatorChar)[^1].Replace(".cer","").Replace(".crt","").Replace(".pem",""));
                     }
 
                     foreach (string pubPath in publicPaths)
@@ -640,6 +677,7 @@ namespace RocketRMM
                     X509Extension? certificateRevocvationList = null;
                     X509Certificate2? returnCertificate = null;
                     certificateRevocvationList = CertificateRevocationListBuilder.BuildCrlDistributionPointExtension(new[] { $"{CoreEnvironment.FrontEndUri.ToLower()}/pki/crl/rocketrmm.crl" });
+                    bool importCert = false;
 
                     switch (certificateType)
                     {
@@ -651,6 +689,7 @@ namespace RocketRMM
                             basicConstraints = new X509BasicConstraintsExtension(true, true, 1, true);
                             pubPaths = [$"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.cer", $"{CoreEnvironment.WebRootPath}{Path.DirectorySeparatorChar}pki{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.cer"];
                             secPaths = [$"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.pfx"];
+                            importCert = true;
                             break;
 
                         case CoreEnvironment.CertificateType.Intermediary:
@@ -660,6 +699,7 @@ namespace RocketRMM
                             basicConstraints = new X509BasicConstraintsExtension(true, true, 0, true);
                             string password = await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey((int)CoreEnvironment.CertificateType.Ca));
                             issuerCert = new X509Certificate2(fileName: $"{CoreEnvironment.CaDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CaRootCertName}.pfx", password: await Base64Encode(await CoreEnvironment.GetDeviceIdGeneratedKey((int)CoreEnvironment.CertificateType.Ca)));
+                            importCert = true;
                             break;
 
                         case CoreEnvironment.CertificateType.Authentication:
@@ -693,7 +733,7 @@ namespace RocketRMM
 
                     if (returnCertificate != null)
                     {
-                        return await WriteCertificate(returnCertificate, pubPaths, secPaths, certificateType, ecdsaKeyPair);
+                        return await WriteCertificate(returnCertificate, pubPaths, secPaths, certificateType, ecdsaKeyPair, importCert);
                     }
 
                     return null;

@@ -27,6 +27,7 @@ namespace RocketRMM
 #else
             internal static readonly bool IsDebug = false;
 #endif
+        internal static string LogLevel = "information";
         internal static readonly string CoreVersion = "0.0.1:alpha";
         internal static readonly string WorkingDir = Directory.GetCurrentDirectory();
         internal static string? PersistentDir;
@@ -136,9 +137,27 @@ namespace RocketRMM
             Directory.CreateDirectory($"{CaIntermediateDir}{Path.DirectorySeparatorChar}revoked");
             Directory.CreateDirectory($"{CertificatesDir}{Path.DirectorySeparatorChar}revoked");
             Directory.CreateDirectory(CrlDir);
-            Utilities.ConsoleColourWriteLine($"Cache Directory: {CacheDir}", ConsoleColor.Cyan);
-            Utilities.ConsoleColourWriteLine($"Data Directory: {DataDir}", ConsoleColor.Cyan);
-            Utilities.ConsoleColourWriteLine($@"Persistent Directory: {PersistentDir}", ConsoleColor.Cyan);
+
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Cache Directory: {CacheDir}",
+                Severity = "Debug",
+                API = "DataAndCacheDirectoriesBuild"
+            });
+
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Data Directory: {DataDir}",
+                Severity = "Debug",
+                API = "DataAndCacheDirectoriesBuild"
+            });
+
+            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+            {
+                Message = $"Persistent Directory: {PersistentDir}",
+                Severity = "Debug",
+                API = "DataAndCacheDirectoriesBuild"
+            });
         }
 
         /// <summary>
@@ -211,6 +230,8 @@ namespace RocketRMM
 
                     using UserProfilesDbContext userProfilesDb = new();
                     userProfilesDb.Database.Migrate();
+
+                    break;
                 }
                 catch (MySqlException ex)
                 {
@@ -284,7 +305,7 @@ namespace RocketRMM
                 _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                 {
                     Message = $"Failed to setup Entra SAM applications using bootstrap.json, exception: {ex.Message}\nThis is a fatal exception because the Core cannot function without the needed SAM apps. Shutting Core down...",
-                    Severity = "Error",
+                    Severity = "Critical",
                     API = "CheckForBootstrap"
                 });
 

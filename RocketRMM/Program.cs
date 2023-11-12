@@ -32,6 +32,7 @@ v{CoreEnvironment.CoreVersion}", ConsoleColor.DarkGray);
 var builder = WebApplication.CreateBuilder(args);
 
 // Load individual settings
+CoreEnvironment.LogLevel = CoreEnvironment.TryGetSetting(builder, "Logging:LogLevel:Default", "information").ToLower();
 CoreEnvironment.ShowDevEnvEndpoints = CoreEnvironment.TryGetSetting(builder, "ApiSettings:ShowDevEndpoints", false);
 CoreEnvironment.ShowSwaggerUi = CoreEnvironment.TryGetSetting(builder, "ApiSettings:ShowSwaggerUi", false);
 CoreEnvironment.RunSwagger = CoreEnvironment.TryGetSetting(builder, "ApiSettings:RunSwagger", false);
@@ -57,14 +58,15 @@ CoreEnvironment.KestrelHttp = CoreEnvironment.TryGetSetting(builder, "Kestrel:En
 if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
 {
     Utilities.ConsoleColourWriteLine($"Detected platform {CoreEnvironment.GetOperatingSystem().GetDisplayName()}");
+
+    // Update DB if new manifest or create if not exist
+    CoreEnvironment.UpdateDbContexts();
+
     // Build Data/Cache directories if they don't exist
     CoreEnvironment.DataAndCacheDirectoriesBuild();
 
     // Get the identifying tag of this instance
     CoreEnvironment.DeviceTag = await CoreEnvironment.GetDeviceTag();
-
-    // Update DB if new manifest or create if not exist
-    CoreEnvironment.UpdateDbContexts();
 
     // These bytes form the basis of persistent but importantly unique seed entropy throughout crypto functions in this API
     await CoreEnvironment.GetEntropyBytes();
@@ -135,8 +137,6 @@ if (CoreEnvironment.IsDebug)
     {
         Utilities.ConsoleColourWriteLine("######################## RocketRMM is running from a development environment", ConsoleColor.Yellow);
     }
-
-    Utilities.ConsoleColourWriteLine("");
 }
 
 // Prep Swagger and specify the auth settings for it to use a EntraSam on Azure AD

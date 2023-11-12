@@ -23,22 +23,6 @@ namespace RocketRMM.Data.Logging
             return await _logEntries.OrderByDescending(x => x.Timestamp).Take(10).ToListAsync() ?? new();
         }
 
-        /// <summary>
-        /// Writes to the console only if we are running in debug
-        /// </summary>
-        /// <param name="content">Content to write to console</param>
-        /// <returns>bool which indicates successful write to console</returns>
-        public static bool DebugConsoleWrite(string content, ConsoleColor colour=ConsoleColor.White)
-        {
-            if (CoreEnvironment.IsDebug)
-            {
-                Utilities.ConsoleColourWriteLine(content,colour);
-                return true;
-            }
-
-            return false;
-        }
-
         public async Task<bool> AddLogEntry(LogEntry logEntry)
         {
             try
@@ -60,24 +44,59 @@ namespace RocketRMM.Data.Logging
                     logEntry.SentAsAlert = false;
                 }
 
-                if (logEntry.Severity.ToLower().Equals("debug") && !CoreEnvironment.IsDebug)
-                {
-                    Utilities.ConsoleColourWriteLine("Not writing to log file - Debug mode is not enabled.");
-                }
-
                 // Write to console for debug environment
                 switch (logEntry.Severity.ToLower())
                 {
+                    case "critical":
+                        if (!CoreEnvironment.LogLevel.Equals("critical") && !CoreEnvironment.LogLevel.Equals("error") && !CoreEnvironment.LogLevel.Equals("warning") && !CoreEnvironment.LogLevel.Equals("debug") && !CoreEnvironment.LogLevel.Equals("trace") && !CoreEnvironment.LogLevel.Equals("information"))
+                        {
+                            return false;
+                        }
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Red);
+                        break;
+
                     case "error":
-                        DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}",ConsoleColor.Red);
+                        if (!CoreEnvironment.LogLevel.Equals("error") && !CoreEnvironment.LogLevel.Equals("warning") && !CoreEnvironment.LogLevel.Equals("debug") && !CoreEnvironment.LogLevel.Equals("trace") && !CoreEnvironment.LogLevel.Equals("information"))
+                        {
+                            return false;
+                        }
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Red);
                         break;
 
                     case "warning":
-                        DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Yellow);
+                        if (!CoreEnvironment.LogLevel.Equals("warning") && !CoreEnvironment.LogLevel.Equals("debug") && !CoreEnvironment.LogLevel.Equals("trace") && !CoreEnvironment.LogLevel.Equals("information"))
+                        {
+                            return false;
+                        }
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Yellow);
+                        break;
+
+                    case "information":
+                        if(!CoreEnvironment.LogLevel.Equals("debug") && !CoreEnvironment.LogLevel.Equals("trace") && !CoreEnvironment.LogLevel.Equals("information"))
+                        {
+                            return false;
+                        }
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}");
+                        break;
+
+                    case "debug":
+                        if(!CoreEnvironment.IsDebug && !CoreEnvironment.LogLevel.Equals("debug") && !CoreEnvironment.LogLevel.Equals("trace"))
+                        {
+                            return false;
+                        }
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Cyan);
+                        break;
+
+                    case "trace":
+                        if(!CoreEnvironment.IsDebug && !CoreEnvironment.LogLevel.Equals("trace"))
+                        {
+                            return false;
+                        }
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}", ConsoleColor.Gray);
                         break;
 
                     default:
-                        DebugConsoleWrite($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}");
+                        Utilities.ConsoleColourWriteLine($"[ {DateTime.UtcNow} ] - {logEntry.Severity} - {logEntry.Message} - {logEntry.API} - {logEntry.Username} - {logEntry.SentAsAlert}");
                         break;
                 }
 
