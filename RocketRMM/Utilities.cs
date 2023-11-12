@@ -601,8 +601,6 @@ namespace RocketRMM
                             process.Start();
                             await process.WaitForExitAsync();
 
-                            throw (new Exception(process.StandardError.ReadToEnd()));
-
                             if (process.ExitCode == 0)
                             {
 
@@ -612,6 +610,10 @@ namespace RocketRMM
                                     Severity = "Information",
                                     API = "WriteCertificate"
                                 });
+                            }
+                            else
+                            {
+                                throw new Exception(process.StandardError.ReadToEnd());
                             }
                         }
                         catch (Exception ex)
