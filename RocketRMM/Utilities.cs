@@ -595,7 +595,7 @@ namespace RocketRMM
                             // Put cert in /usr/local/share/ca-certificates
                             await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{fileNameNoExtension}.crt", certificate.ExportCertificatePem());
                             // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
-                            await Cli.Wrap("update-ca-certificates").ExecuteAsync();
+                            await Cli.Wrap("/usr/sbin/update-ca-certificates").ExecuteAsync();
 
                             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                             {
