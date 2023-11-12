@@ -597,8 +597,11 @@ namespace RocketRMM
                             process.StartInfo.FileName = "/usr/sbin/update-ca-certificates";
                             process.StartInfo.UseShellExecute = false;
                             process.StartInfo.RedirectStandardOutput = true;
+                            process.StartInfo.RedirectStandardError = true;
                             process.Start();
                             await process.WaitForExitAsync();
+
+                            throw (new Exception(process.StandardError.ReadToEnd()));
 
                             if (process.ExitCode == 0)
                             {
