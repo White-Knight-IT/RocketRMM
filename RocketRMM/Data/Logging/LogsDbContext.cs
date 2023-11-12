@@ -209,7 +209,7 @@ namespace RocketRMM.Data.Logging
             return await ExecuteQuery(addLog);
         }
 
-        private static async Task<type> ExecuteQuery<type>(Task<type> taskToRun)
+        private static async Task<T> ExecuteQuery<T>(Task<T> taskToRun)
         {
             try
             {

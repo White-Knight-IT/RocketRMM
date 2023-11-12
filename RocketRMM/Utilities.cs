@@ -5,8 +5,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Diagnostics;
-using CliWrap;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace RocketRMM
 {
@@ -34,13 +32,13 @@ namespace RocketRMM
         /// <typeparam name="type">Will parse into a list of objects of this type</typeparam>
         /// <param name="rawJson"></param>
         /// <returns>List of objects defined by given type</returns>
-        internal static List<type> ParseJson<type>(List<JsonElement> rawJson)
+        internal static List<T> ParseJson<T>(List<JsonElement> rawJson)
         {
-            List<type> objectArrayList = [];
+            List<T> objectArrayList = [];
 
             foreach (JsonElement je in rawJson)
             {
-                objectArrayList.Add(JsonSerializer.Deserialize<type>(je, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true, MaxDepth = 64 }));
+                objectArrayList.Add(JsonSerializer.Deserialize<T>(je, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true, MaxDepth = 64 }));
             }
 
             return objectArrayList;
@@ -53,9 +51,9 @@ namespace RocketRMM
         /// <param name="json">JSON object/s to serialize to file</param>
         /// <param name="filePath">File path, use "" to avoid writing to file and just get the string</param>
         ///<returns>The string that was written to file</returns>
-        internal static async Task<string> WriteJsonToFile<type>(object json, string filePath, bool encrypt = false, byte[]? key = null, bool newLines=false)
+        internal static async Task<string> WriteJsonToFile<T>(object json, string filePath, bool encrypt = false, byte[]? key = null, bool newLines=false)
         {
-            string jsonString = JsonSerializer.Serialize((type)json);
+            string jsonString = JsonSerializer.Serialize((T)json);
 
             if (encrypt)
             {
@@ -76,7 +74,7 @@ namespace RocketRMM
         /// <typeparam name="type">Type of our JSON object to make</typeparam>
         /// <param name="filePath">Path to our file containing JSON</param>
         /// <returns>JSON object of specified type</returns>
-        internal static async Task<type> ReadJsonFromFile<type>(string filePath, bool decrypt = false, byte[]? key = null)
+        internal static async Task<T> ReadJsonFromFile<T>(string filePath, bool decrypt = false, byte[]? key = null)
         {
             string jsonString = File.ReadAllText(filePath);
 
@@ -85,7 +83,7 @@ namespace RocketRMM
                 jsonString = await Crypto.AesDecrypt(jsonString, key);
             }
 
-            return JsonSerializer.Deserialize<type>(jsonString);
+            return JsonSerializer.Deserialize<T>(jsonString);
         }
 
         /// <summary>
@@ -595,17 +593,21 @@ namespace RocketRMM
                             // Put cert in /usr/local/share/ca-certificates
                             await File.WriteAllTextAsync($"/usr/local/share/ca-certificates/{fileNameNoExtension}.crt", certificate.ExportCertificatePem());
                             // Execute update-ca-certificates to install the CA cert into trusted, this will fail if not root
-                            //await Cli.Wrap("/usr/sbin/update-ca-certificates").ExecuteAsync();
-                            Process process = new Process();
+                            Process process = new();
                             process.StartInfo.FileName = "/usr/sbin/update-ca-certificates";
-                            process.Start();
+                            process.StartInfo.UseShellExecute = true;
+                            await process.WaitForExitAsync();
 
-                            _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                            if (process.ExitCode == 0)
                             {
-                                Message = logMessage,
-                                Severity = "Information",
-                                API = "WriteCertificate"
-                            });
+
+                                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                                {
+                                    Message = logMessage,
+                                    Severity = "Information",
+                                    API = "WriteCertificate"
+                                });
+                            }
                         }
                         catch (Exception ex)
                         {
