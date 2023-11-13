@@ -40,7 +40,6 @@ namespace RocketRMM
         internal static string? CurrentSamAuthCertificateDir;
         internal static string? CrlDir;
         internal static string? CaRootCertPem;
-        internal static string? CurrentCaIntermediateCertPem;
         internal static readonly string CaRootCertName = "ca";
         internal static string CurrentCaIntermediateCertName = "intermediateca1";
         internal static readonly string[] CaIntermediateCertNames = ["intermediateca1", "intermediateca2","intermediateca3"];

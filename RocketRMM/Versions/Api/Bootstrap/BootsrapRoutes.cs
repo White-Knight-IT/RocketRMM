@@ -90,6 +90,7 @@ namespace RocketRMM.Api.Bootstrap
                         CoreEnvironment.Secrets.RefreshToken = headers["refresh_token"];
                         CoreZeroConfiguration zeroConf = await CoreZeroConfiguration.Read();
                         zeroConf.RefreshToken = CoreEnvironment.Secrets.RefreshToken;
+                        zeroConf.IsBootstrapped = true;
                         _ = zeroConf.Save();
                         //redirect to success page
                         context.Response.Redirect($"{CoreEnvironment.FrontEndUri}/setup/graphtoken/success");

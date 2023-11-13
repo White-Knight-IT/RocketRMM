@@ -27,11 +27,11 @@ namespace RocketRMM
         /// <param name="scope">Scope of our query</param>
         /// <param name="returnRefresh">Return the refresh_token as well as the access_token?</param>
         /// <returns>A dictionary containing either the access_token or all values returned by the query for use in query headers</returns>
-        internal static async Task<Dictionary<string, string>> GetGraphToken(string tenantId, bool asApp, string appId = "", string refreshToken = "", string scope = "https://graph.microsoft.com//.default", bool returnRefresh = false, bool isBootstrap=false)
+        internal static async Task<Dictionary<string, string>> GetGraphToken(string tenantId, bool asApp, string appId = "", string refreshToken = "", string scope = "https://graph.microsoft.com//.default", bool returnRefresh = false)
         {
             string? authBody;
 
-            if (isBootstrap)
+            if (!CoreEnvironment.IsBoostrapped)
             {
                 if (asApp)
                 {
@@ -136,7 +136,7 @@ namespace RocketRMM
                     });
 
                     Thread.CurrentThread.Join(1020);
-                    return await GetGraphToken(tenantId, asApp, appId, refreshToken, scope, returnRefresh, isBootstrap);
+                    return await GetGraphToken(tenantId, asApp, appId, refreshToken, scope, returnRefresh);
                 }
 
                 CoreEnvironment.RunErrorCount++;
@@ -162,12 +162,12 @@ namespace RocketRMM
         /// <param name="asApp">As application or as delegated user</param>
         /// <param name="noPagination"></param>
         /// <returns>A List containing one or more JSON Elements</returns>
-        internal static async Task<List<JsonElement>> NewGraphGetRequest(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, bool noPagination = false, bool isBootstrap = false)
+        internal static async Task<List<JsonElement>> NewGraphGetRequest(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, bool noPagination = false)
         {
             List<JsonElement> data = [];
             Dictionary<string, string> headers;
 
-            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false, isBootstrap);
+            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
             {
@@ -286,12 +286,12 @@ namespace RocketRMM
         /// <param name="asApp">As application or as delegated user</param>
         /// <param name="contentHeader">Set the content header for the type of data we want returned</param>
         /// <returns>A byte[] representing content returned in the response</returns>
-        internal static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "", bool isBootstrap =false)
+        internal static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "")
         {
             List<byte> data = [];
             Dictionary<string, string> headers;
 
-            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false, isBootstrap);
+            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
             {
@@ -369,9 +369,9 @@ namespace RocketRMM
         /// <param name="scope"></param>
         /// <param name="asApp">As application or delegated user</param>
         /// <returns>The content in any response as JSON</returns>
-        internal static async Task<JsonElement> NewGraphPostPatchPutRequest(string uri, string tenantId, object body, HttpMethod method, string scope, bool asApp, bool isBootstrap = false)
+        internal static async Task<JsonElement> NewGraphPostPatchPutRequest(string uri, string tenantId, object body, HttpMethod method, string scope, bool asApp)
         {
-            Dictionary<string, string> headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false, isBootstrap);
+            Dictionary<string, string> headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
             {
@@ -588,11 +588,11 @@ namespace RocketRMM
             var privateKey = (RSA)await Utilities.Crypto.GetPrivateKeyFromCertificate<RSA>($"{CoreEnvironment.CurrentSamAuthCertificateDir}sam.pfx", CoreEnvironment.CertificateType.SamAuthentication);
             X509Certificate2 cert = new($"{CoreEnvironment.CurrentSamAuthCertificateDir}sam.cer");
             JwtHeader jwth = new() { Alg = "RS256", Typ = "JWT", Kid = cert.Thumbprint, X5t = Utilities.Base64UrlEncode(Convert.FromHexString(cert.Thumbprint)) };
-            JwtPayload jwtp = new() { Aud = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/token", Exp = DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeSeconds(), Iss = CoreEnvironment.Secrets.ApplicationId, Jti = new Guid(RandomNumberGenerator.GetBytes(16)).ToString(), Nbf = DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds(), Sub = CoreEnvironment.Secrets.ApplicationId };
+            JwtPayload jwtp = new() { Aud = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/token", Exp = DateTimeOffset.UtcNow.AddMinutes(15).ToUnixTimeSeconds(), Iss = CoreEnvironment.Secrets.ApplicationId, Jti = new Guid(RandomNumberGenerator.GetBytes(16)).ToString(), Nbf = DateTimeOffset.UtcNow.AddMinutes(-15).ToUnixTimeSeconds(), Sub = CoreEnvironment.Secrets.ApplicationId };
             JsonSerializerOptions jso = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-            JsonWebToken jwt = new JsonWebToken(JsonSerializer.Serialize(jwth, jso), JsonSerializer.Serialize(jwtp, jso));
-            string sig = JwtTokenUtilities.CreateEncodedSignature(jwt.ToString(), new SigningCredentials(new RsaSecurityKey(privateKey), "RS256"));
-            return $"{jwt}.{sig}";
+            JsonWebToken jwt = new(JsonSerializer.Serialize(jwth, jso), JsonSerializer.Serialize(jwtp, jso));
+            string signature = JwtTokenUtilities.CreateEncodedSignature(jwt.ToString(), new SigningCredentials(new RsaSecurityKey(privateKey), "RS256"));
+            return $"{jwt}.{signature}";
         }
 
         internal struct JwtHeader

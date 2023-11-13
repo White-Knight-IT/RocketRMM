@@ -641,15 +641,12 @@ namespace RocketRMM
                                 break;
 
                             case CoreEnvironment.CertificateType.Intermediary:
-                                if(pubPath.Contains(CoreEnvironment.CurrentCaIntermediateCertName))
-                                {
-                                    CoreEnvironment.CurrentCaIntermediateCertPem = exportPem;
-                                }
                                 break;
 
                             default:
                                 // Bundle our signing Intermediary CA cert into this certificate as well
-                                await File.AppendAllTextAsync(pubPath, $"\n{CoreEnvironment.CurrentCaIntermediateCertPem}");
+                                string intermediateCaPem = "\n" + await File.ReadAllTextAsync($"{CoreEnvironment.CaIntermediateDir}{Path.DirectorySeparatorChar}{CoreEnvironment.CurrentCaIntermediateCertName}.cer");
+                                await File.AppendAllTextAsync(pubPath, intermediateCaPem);
                                 break;
                         }
                     }

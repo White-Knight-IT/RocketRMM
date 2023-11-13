@@ -778,7 +778,7 @@ namespace RocketRMM
                         }
                     };
 
-                    JsonElement createdSamApp = await GraphRequestHelper.NewGraphPostPatchPutRequest("https://graph.microsoft.com/v1.0/applications", CoreEnvironment.Secrets.TenantId, samApp, HttpMethod.Post, "https://graph.microsoft.com/.default", true, true);
+                    JsonElement createdSamApp = await GraphRequestHelper.NewGraphPostPatchPutRequest("https://graph.microsoft.com/v1.0/applications", CoreEnvironment.Secrets.TenantId, samApp, HttpMethod.Post, "https://graph.microsoft.com/.default", true);
                     Utilities.ConsoleColourWriteLine("Waiting 30 seconds for app to progagate through Azure before setting a password on it...");
                     await Task.Delay(30000); // Have to wait about 30 seconds for Azure to properly replicate the app before we can set password or add certificate to it
 
@@ -789,15 +789,15 @@ namespace RocketRMM
 
                     // Stuff certificate into app as credential
                     KeyCredential keyCred = new() { EndDateTime = DateTimeOffset.Parse(cert.GetExpirationDateString()), StartDateTime = DateTimeOffset.Parse(cert.GetEffectiveDateString()), Type = "AsymmetricX509Cert", Usage = "Verify", Key = samCertificate, DisplayName = cert.SubjectName.Name };
-                    var appCert = await GraphRequestHelper.NewGraphPostPatchPutRequest($"https://graph.microsoft.com/v1.0/applications/{createdSamApp.GetProperty("id").GetString()}", CoreEnvironment.Secrets.TenantId, new KeyCredentialList() { KeyCredentials = [keyCred] }, HttpMethod.Patch, "https://graph.microsoft.com/.default", true, true);
+                    var appCert = await GraphRequestHelper.NewGraphPostPatchPutRequest($"https://graph.microsoft.com/v1.0/applications/{createdSamApp.GetProperty("id").GetString()}", CoreEnvironment.Secrets.TenantId, new KeyCredentialList() { KeyCredentials = [keyCred] }, HttpMethod.Patch, "https://graph.microsoft.com/.default", true);
                     
                     // Create service principle for app and assign it to AdminAgents group
                     var servicePrincipleJson = await GraphRequestHelper.NewGraphPostPatchPutRequest("https://graph.microsoft.com/v1.0/servicePrincipals", CoreEnvironment.Secrets.TenantId, new AppId() { appId = createdSamApp.GetProperty("appId").GetString() }, HttpMethod.Post, "https://graph.microsoft.com/.default", true);
-                    var adminAgentGroupJson = await GraphRequestHelper.NewGraphGetRequest("https://graph.microsoft.com/v1.0/groups?$filter=startswith(displayName,'AdminAgents')&$select=id", CoreEnvironment.Secrets.TenantId, "https://graph.microsoft.com/.default", true, false, true);
+                    var adminAgentGroupJson = await GraphRequestHelper.NewGraphGetRequest("https://graph.microsoft.com/v1.0/groups?$filter=startswith(displayName,'AdminAgents')&$select=id", CoreEnvironment.Secrets.TenantId, "https://graph.microsoft.com/.default", true, false);
                     string jsonString = $@"{{""@odata.id"":""https://graph.microsoft.com/v1.0/servicePrincipals/{servicePrincipleJson.GetProperty("id").GetString()}""}}";
                     Utilities.ConsoleColourWriteLine("Waiting 30 seconds for Service Principal to progagate through Azure before assigning it as a member of AdminAgents group...");
                     await Task.Delay(30000);
-                    await GraphRequestHelper.NewGraphPostPatchPutRequest($"https://graph.microsoft.com/v1.0/groups/{adminAgentGroupJson[0].GetProperty("id").GetString()}/members/$ref", CoreEnvironment.Secrets.TenantId, JsonSerializer.Deserialize<JsonElement>(jsonString), HttpMethod.Post, "https://graph.microsoft.com/.default", true, true);
+                    await GraphRequestHelper.NewGraphPostPatchPutRequest($"https://graph.microsoft.com/v1.0/groups/{adminAgentGroupJson[0].GetProperty("id").GetString()}/members/$ref", CoreEnvironment.Secrets.TenantId, JsonSerializer.Deserialize<JsonElement>(jsonString), HttpMethod.Post, "https://graph.microsoft.com/.default", true);
                     return new() { EntraSam = createdSamApp, CertificatePath = $"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}sam{Path.DirectorySeparatorChar}sam.pfx" ?? string.Empty };
 
                 case SamAppType.Spa:
@@ -812,7 +812,7 @@ namespace RocketRMM
                         samApp.spa = new Spa() { RedirectUris = spaRedirectUri };
                     }
 
-                    return new() { EntraSam = await GraphRequestHelper.NewGraphPostPatchPutRequest("https://graph.microsoft.com/v1.0/applications", CoreEnvironment.Secrets.TenantId, samApp, HttpMethod.Post, "https://graph.microsoft.com/.default", true, true) };
+                    return new() { EntraSam = await GraphRequestHelper.NewGraphPostPatchPutRequest("https://graph.microsoft.com/v1.0/applications", CoreEnvironment.Secrets.TenantId, samApp, HttpMethod.Post, "https://graph.microsoft.com/.default", true) };
             }
 
             return new();
