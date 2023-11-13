@@ -27,11 +27,11 @@ namespace RocketRMM
         [JsonInclude]
         internal string? CallbackPath { get; set; }
         [JsonInclude]
-        internal string? AppPassword { get; set; }
-        [JsonInclude]
         internal string? RefreshToken { get; set; }
         [JsonInclude]
         internal bool? IsBootstrapped { get; set; }
+        [JsonInclude]
+        internal string? CurrentIntermediateCertificateName { get; set; }
 
         internal static async Task<bool> Setup(string ownerTenant = "")
         {
@@ -44,7 +44,7 @@ namespace RocketRMM
 
             // step one - create EntraSam SPA that the Swagger UI will use to authenticate
 
-            JsonElement samSpa = (await EntraSam.CreateSAMAuthApp($"RocketRMM UI - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Spa, domain, spaRedirectUri: new string[] { $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/swagger/oauth2-redirect.html", $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/index.html", CoreEnvironment.FrontEndUri.TrimEnd('/') })).EntraSam;
+            JsonElement samSpa = (await EntraSam.CreateSAMAuthApp($"RocketRMM UI - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Spa, domain, spaRedirectUri: [$"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/swagger/oauth2-redirect.html", $"{CoreEnvironment.FrontEndUri.TrimEnd('/')}/index.html", CoreEnvironment.FrontEndUri.TrimEnd('/')])).EntraSam;
             string openIdClientId = samSpa.GetProperty("appId").GetString() ?? string.Empty;
             if (!openIdClientId.Equals(string.Empty))
             {
@@ -52,9 +52,9 @@ namespace RocketRMM
                 await Task.Delay(30000);
 
                 // step two - create EntraSam that will act as the authentication hub of the API
-                EntraSam.SamAndPassword result = await EntraSam.CreateSAMAuthApp($"RocketRMM API - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Api, domain, openIdClientId, scopeGuid: apiScopeGuid);
+                EntraSam.SamAndCertificate result = await EntraSam.CreateSAMAuthApp($"RocketRMM API - {CoreEnvironment.DeviceTag}", EntraSam.SamAppType.Api, domain, openIdClientId, scopeGuid: apiScopeGuid);
                 JsonElement samApi = result.EntraSam;
-                string? appPassword = result.AppPassword;
+                string? certPath = result.CertificatePath;
                 string clientId = samApi.GetProperty("appId").GetString() ?? string.Empty;
                 string idUri = samApi.GetProperty("identifierUris").EnumerateArray().ToArray()[0].GetString() ?? string.Empty;
                 string apiScope = string.Format("{0}/{1}", idUri, CoreEnvironment.ApiAccessScope);
@@ -73,7 +73,7 @@ namespace RocketRMM
                         ApiScope = apiScope,
                         OpenIdClientId = openIdClientId,
                         CallbackPath = "/signin-oidc",
-                        AppPassword = appPassword
+                        CurrentIntermediateCertificateName = CoreEnvironment.CurrentCaIntermediateCertName
 
                     };
 
@@ -123,9 +123,9 @@ const config = {{
                 {
                     CoreEnvironment.Secrets.TenantId = zero.TenantId;
                     CoreEnvironment.Secrets.ApplicationId = zero.ClientId;
-                    CoreEnvironment.Secrets.ApplicationSecret = zero.AppPassword;
                     CoreEnvironment.Secrets.RefreshToken = zero.RefreshToken;
                     CoreEnvironment.IsBoostrapped = zero.IsBootstrapped ?? false;
+                    CoreEnvironment.CurrentCaIntermediateCertName = zero.CurrentIntermediateCertificateName ?? "intermediateca1";
                     builder.Configuration["ZeroConf:AzureAd:TenantId"] = zero.TenantId;
                     builder.Configuration["ZeroConf:AzureAd:ClientId"] = zero.ClientId;
                     builder.Configuration["ZeroConf:AzureAd:Domain"] = zero.Domain;
@@ -176,7 +176,6 @@ const config = {{
                 _ = Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true, null, true);
                 CoreEnvironment.Secrets.TenantId = TenantId;
                 CoreEnvironment.Secrets.ApplicationId = ClientId;
-                CoreEnvironment.Secrets.ApplicationSecret = AppPassword;
                 CoreEnvironment.Secrets.RefreshToken = RefreshToken;
                 CoreEnvironment.IsBoostrapped = IsBootstrapped ?? false;
                 return true;

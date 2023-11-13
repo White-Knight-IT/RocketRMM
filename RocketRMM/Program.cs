@@ -10,6 +10,9 @@ using System.Text.Json;
 using RocketRMM;
 using Microsoft.OpenApi.Extensions;
 using RocketRMM.Data.Logging;
+using static RocketRMM.EntraSam;
+using System.Text.Json.Serialization;
+using System.Security.Cryptography.X509Certificates;
 
 Utilities.ConsoleColourWriteLine($@"                                                                    /\
  _____                _           _    _____   __  __  __  __      |--|
@@ -49,10 +52,12 @@ CoreEnvironment.PkiDir =  $"{CoreEnvironment.PersistentDir}{Path.DirectorySepara
 CoreEnvironment.CaDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}root";
 CoreEnvironment.CaIntermediateDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}ca{Path.DirectorySeparatorChar}intermediate";
 CoreEnvironment.CertificatesDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}certificates";
+CoreEnvironment.CurrentSamAuthCertificateDir = $"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}sam{Path.DirectorySeparatorChar}";
 CoreEnvironment.CrlDir = $"{CoreEnvironment.PkiDir}{Path.DirectorySeparatorChar}crl";
 CoreEnvironment.WebRootPath = CoreEnvironment.TryGetSetting(builder, "ApiSettings:WebRootPath", $"{CoreEnvironment.WorkingDir}{Path.DirectorySeparatorChar}wwwroot").Trim();
 CoreEnvironment.FrontEndUri = CoreEnvironment.TryGetSetting(builder, "ApiSettings:WebUiUrl", "http://localhost").Trim();
 CoreEnvironment.KestrelHttp = CoreEnvironment.TryGetSetting(builder, "Kestrel:Endpoints:Http:Url", "http://localhost:8088").Trim();
+
 
 // We skip a lot of the setup/config stuff if it is a DB migration
 if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.OrdinalIgnoreCase))
@@ -70,8 +75,6 @@ if (!Environment.GetCommandLineArgs().Contains("migrations", StringComparer.Ordi
 
     // These bytes form the basis of persistent but importantly unique seed entropy throughout crypto functions in this API
     await CoreEnvironment.GetEntropyBytes();
-
-    await Utilities.Crypto.GetCertificate([$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.cer"], [$"{CoreEnvironment.CertificatesDir}{Path.DirectorySeparatorChar}auth.pfx"], CoreEnvironment.CertificateType.Authentication, $"CN = \"RocketRMM - {await CoreEnvironment.GetDeviceTag()} - Auth\",O = \"RocketRMM\"");
 
     // We will import our ApiZeroConf settings else try find bootstrap app to build from
     while (!CoreZeroConfiguration.ImportApiZeroConf(ref builder))
@@ -256,5 +259,8 @@ _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
     Severity = "Information",
     API = "Program"
 });
+/*while(true)
+{
 
+}*/
 app.Run();

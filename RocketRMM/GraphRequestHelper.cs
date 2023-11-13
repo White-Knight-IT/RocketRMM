@@ -4,6 +4,12 @@ using System.Text.Json;
 using System.Web;
 using RocketRMM.Data.Logging;
 using System.Text.Json.Serialization;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication;
+using System.Text;
+using System.Security.Cryptography;
+using Microsoft.IdentityModel.JsonWebTokens;
+using System.Security.Cryptography.X509Certificates;
 
 namespace RocketRMM
 {
@@ -21,17 +27,34 @@ namespace RocketRMM
         /// <param name="scope">Scope of our query</param>
         /// <param name="returnRefresh">Return the refresh_token as well as the access_token?</param>
         /// <returns>A dictionary containing either the access_token or all values returned by the query for use in query headers</returns>
-        internal static async Task<Dictionary<string, string>> GetGraphToken(string tenantId, bool asApp, string appId = "", string refreshToken = "", string scope = "https://graph.microsoft.com//.default", bool returnRefresh = false)
+        internal static async Task<Dictionary<string, string>> GetGraphToken(string tenantId, bool asApp, string appId = "", string refreshToken = "", string scope = "https://graph.microsoft.com//.default", bool returnRefresh = false, bool isBootstrap=false)
         {
             string? authBody;
 
-            if (asApp)
+            if (isBootstrap)
             {
-                authBody = $"client_id={HttpUtility.UrlEncode(CoreEnvironment.Secrets.ApplicationId)}&client_secret={HttpUtility.UrlEncode(CoreEnvironment.Secrets.ApplicationSecret)}&scope={HttpUtility.UrlEncode(scope)}&grant_type=client_credentials";
+                if (asApp)
+                {
+                    authBody = $"client_id={HttpUtility.UrlEncode(CoreEnvironment.Secrets.ApplicationId)}&client_secret={HttpUtility.UrlEncode(CoreEnvironment.Secrets.ApplicationSecret)}&scope={HttpUtility.UrlEncode(scope)}&grant_type=client_credentials";
+                }
+                else
+                {
+                    authBody = $"client_id={CoreEnvironment.Secrets.ApplicationId}&client_secret={CoreEnvironment.Secrets.ApplicationSecret}&scope={scope}&refresh_token={CoreEnvironment.Secrets.RefreshToken}&grant_type=refresh_token";
+                }
             }
             else
             {
-                authBody = $"client_id={CoreEnvironment.Secrets.ApplicationId}&client_secret={CoreEnvironment.Secrets.ApplicationSecret}&scope={scope}&refresh_token={CoreEnvironment.Secrets.RefreshToken}&grant_type=refresh_token";
+
+                string token = await GetJwtToken();
+
+                if (asApp)
+                {
+                    authBody = $"client_id={HttpUtility.UrlEncode(CoreEnvironment.Secrets.ApplicationId)}&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion={token}&scope={HttpUtility.UrlEncode(scope)}&grant_type=client_credentials";
+                }
+                else
+                {
+                    authBody = $"client_id={CoreEnvironment.Secrets.ApplicationId}&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion={token}&scope={scope}&refresh_token={CoreEnvironment.Secrets.RefreshToken}&grant_type=refresh_token";
+                }
             }
 
             if (!string.IsNullOrEmpty(appId) && !string.IsNullOrEmpty(refreshToken))
@@ -72,7 +95,7 @@ namespace RocketRMM
 
                     string responseRawString = await responseMessage.Content.ReadAsStringAsync();
                     string[] headersRaw = responseRawString[1..^1].Split(",");
-                    Dictionary<string, string> headers = new();
+                    Dictionary<string, string> headers = [];
 
                     foreach (string headerPairRaw in headersRaw)
                     {
@@ -113,7 +136,7 @@ namespace RocketRMM
                     });
 
                     Thread.CurrentThread.Join(1020);
-                    return await GetGraphToken(tenantId, asApp, appId, refreshToken, scope, returnRefresh);
+                    return await GetGraphToken(tenantId, asApp, appId, refreshToken, scope, returnRefresh, isBootstrap);
                 }
 
                 CoreEnvironment.RunErrorCount++;
@@ -139,12 +162,12 @@ namespace RocketRMM
         /// <param name="asApp">As application or as delegated user</param>
         /// <param name="noPagination"></param>
         /// <returns>A List containing one or more JSON Elements</returns>
-        internal static async Task<List<JsonElement>> NewGraphGetRequest(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, bool noPagination = false)
+        internal static async Task<List<JsonElement>> NewGraphGetRequest(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, bool noPagination = false, bool isBootstrap = false)
         {
             List<JsonElement> data = [];
             Dictionary<string, string> headers;
 
-            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
+            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false, isBootstrap);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
             {
@@ -263,12 +286,12 @@ namespace RocketRMM
         /// <param name="asApp">As application or as delegated user</param>
         /// <param name="contentHeader">Set the content header for the type of data we want returned</param>
         /// <returns>A byte[] representing content returned in the response</returns>
-        internal static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "")
+        internal static async Task<byte[]>? NewGraphGetRequestBytes(string uri, string tenantId, string scope = "https://graph.microsoft.com//.default", bool asApp = false, string contentHeader = "", bool isBootstrap =false)
         {
             List<byte> data = [];
             Dictionary<string, string> headers;
 
-            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
+            headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false, isBootstrap);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
             {
@@ -346,20 +369,20 @@ namespace RocketRMM
         /// <param name="scope"></param>
         /// <param name="asApp">As application or delegated user</param>
         /// <returns>The content in any response as JSON</returns>
-        internal static async Task<JsonElement> NewGraphPostRequest(string uri, string tenantId, object body, HttpMethod type, string scope, bool asApp)
+        internal static async Task<JsonElement> NewGraphPostPatchPutRequest(string uri, string tenantId, object body, HttpMethod method, string scope, bool asApp, bool isBootstrap = false)
         {
-            Dictionary<string, string> headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope);
+            Dictionary<string, string> headers = await GetGraphToken(tenantId, asApp, string.Empty, string.Empty, scope, false, isBootstrap);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
             {
                 Message = $"Using {uri} as url",
                 Severity = "Debug",
-                API = "NewGraphPostRequest"
+                API = "NewGraphPostPatchPutRequest"
             });
 
             try
             {
-                using HttpRequestMessage requestMessage = new(type, uri);
+                using HttpRequestMessage requestMessage = new(method, uri);
                 {
                     requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", headers.GetValueOrDefault("Authorization", "FAILED-TO-GET-AUTH-TOKEN"));
                     requestMessage.Headers.TryAddWithoutValidation("ConsistencyLevel", "eventual");
@@ -395,23 +418,30 @@ namespace RocketRMM
                         // Sleep 1 second if we get a 429 and retry
                         Utilities.ConsoleColourWriteLine($"Got a 429 too many requests to {uri}, waiting 1 second and retrying...");
                         Thread.CurrentThread.Join(1020);
-                        return await NewGraphPostRequest(uri, tenantId, body, type, scope, asApp);
+                        return await NewGraphPostPatchPutRequest(uri, tenantId, body, method, scope, asApp);
                     }
 
                     CoreEnvironment.RunErrorCount++;
 
                     _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
                     {
-                        Message = $"Incorrect HTTP status code.Expected 2XX got {responseMessage.StatusCode}. Uri: {uri}",
+                        Message = $"Incorrect HTTP status code. Expected 2XX got {responseMessage.StatusCode}. Uri: {uri}",
                         Severity = "Error",
-                        API = "NewGraphPostRequest"
+                        API = "NewGraphPostPatchPutRequest"
                     });
                 }
             }
             catch (Exception ex)
             {
                 CoreEnvironment.RunErrorCount++;
-                Utilities.ConsoleColourWriteLine($"Exception in NewGraphPostRequest: {ex.Message}");
+
+                _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                {
+                    Message = $"Exception in NewGraphPostPatchPutRequest: {ex.Message}",
+                    Severity = "Error",
+                    API = "NewGraphPostPatchPutRequest"
+                });
+
                 throw;
             }
 
@@ -546,6 +576,51 @@ namespace RocketRMM
         internal static async Task<HttpResponseMessage> SendHttpRequest(HttpRequestMessage requestMessage)
         {
             return await _httpClient.SendAsync(requestMessage);
+        }
+
+        /// <summary>
+        /// Gets a JWT token to request access tokens using our SAM application
+        /// </summary>
+        /// <returns>A base64 encoded signed JWT</returns>
+        internal static async Task<string> GetJwtToken()
+        {
+            // Make JWT
+            var privateKey = (RSA)await Utilities.Crypto.GetPrivateKeyFromCertificate<RSA>($"{CoreEnvironment.CurrentSamAuthCertificateDir}sam.pfx", CoreEnvironment.CertificateType.SamAuthentication);
+            X509Certificate2 cert = new($"{CoreEnvironment.CurrentSamAuthCertificateDir}sam.cer");
+            JwtHeader jwth = new() { Alg = "RS256", Typ = "JWT", Kid = cert.Thumbprint, X5t = Utilities.Base64UrlEncode(Convert.FromHexString(cert.Thumbprint)) };
+            JwtPayload jwtp = new() { Aud = $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/token", Exp = DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeSeconds(), Iss = CoreEnvironment.Secrets.ApplicationId, Jti = new Guid(RandomNumberGenerator.GetBytes(16)).ToString(), Nbf = DateTimeOffset.UtcNow.AddMinutes(-1).ToUnixTimeSeconds(), Sub = CoreEnvironment.Secrets.ApplicationId };
+            JsonSerializerOptions jso = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            JsonWebToken jwt = new JsonWebToken(JsonSerializer.Serialize(jwth, jso), JsonSerializer.Serialize(jwtp, jso));
+            string sig = JwtTokenUtilities.CreateEncodedSignature(jwt.ToString(), new SigningCredentials(new RsaSecurityKey(privateKey), "RS256"));
+            return $"{jwt}.{sig}";
+        }
+
+        internal struct JwtHeader
+        {
+            [JsonInclude]
+            internal string Alg { get; set; }
+            [JsonInclude]
+            internal string Typ { get; set; }
+            [JsonInclude]
+            internal string Kid { get; set; }
+            [JsonInclude]
+            internal string X5t { get; set; }
+        }
+
+        internal struct JwtPayload
+        {
+            [JsonInclude]
+            internal string Aud { get; set; }
+            [JsonInclude]
+            internal long Exp { get; set; }
+            [JsonInclude]
+            internal string Iss { get; set; }
+            [JsonInclude]
+            internal string Jti { get; set; }
+            [JsonInclude]
+            internal long Nbf { get; set; }
+            [JsonInclude]
+            internal string Sub { get; set; }
         }
     }
 }

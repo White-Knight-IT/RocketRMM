@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 
 namespace RocketRMM.Api.Bootstrap
 {
@@ -52,8 +51,12 @@ namespace RocketRMM.Api.Bootstrap
             {
                 if (!CoreEnvironment.IsBoostrapped)
                 {
-                    HttpRequestMessage requestMessage = new(HttpMethod.Post, $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/token");
-                    requestMessage.Content = new StringContent($"client_id={CoreEnvironment.Secrets.ApplicationId}&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code={code}&redirect_uri={CoreEnvironment.FrontEndUri}/bootstrap/receivegraphtoken&grant_type=authorization_code&client_secret={CoreEnvironment.Secrets.ApplicationSecret}");
+                    string token = await GraphRequestHelper.GetJwtToken();
+
+                    HttpRequestMessage requestMessage = new(HttpMethod.Post, $"https://login.microsoftonline.com/{CoreEnvironment.Secrets.TenantId}/oauth2/v2.0/token")
+                    {
+                        Content = new StringContent($"client_id={CoreEnvironment.Secrets.ApplicationId}&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code={code}&redirect_uri={CoreEnvironment.FrontEndUri}/bootstrap/receivegraphtoken&grant_type=authorization_code&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion={token}")
+                    };
 
                     requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 

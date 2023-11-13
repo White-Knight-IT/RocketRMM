@@ -15,7 +15,7 @@ namespace RocketRMM
     internal class CoreEnvironment
     {
         internal enum ProductionSecretStores { EncryptedFile };
-        internal enum CertificateType { Authentication = 10000, CodeSigning = 10001, Intermediary = 10002, Ca = 10003 };
+        internal enum CertificateType { Authentication = 10000, SamAuthentication=10001, CodeSigning = 10002, Intermediary = 10003, Ca = 10004 };
         internal enum OsType { Windows, MacOs, Linux, FreeBsd, Indeterminate};
         // Roles for managing permissions
         internal static readonly string RoleOwner = "owner";
@@ -37,6 +37,7 @@ namespace RocketRMM
         internal static string? CaDir;
         internal static string? CaIntermediateDir;
         internal static string? CertificatesDir;
+        internal static string? CurrentSamAuthCertificateDir;
         internal static string? CrlDir;
         internal static string? CaRootCertPem;
         internal static string? CurrentCaIntermediateCertPem;
@@ -103,26 +104,26 @@ namespace RocketRMM
         /// <summary>
         /// Returns the OS this code is currently executing on
         /// </summary>
-        public static CoreEnvironment.OsType GetOperatingSystem()
+        public static OsType GetOperatingSystem()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return CoreEnvironment.OsType.Windows;
+                return OsType.Windows;
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                return CoreEnvironment.OsType.MacOs;
+                return OsType.MacOs;
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                return CoreEnvironment.OsType.Linux;
+                return OsType.Linux;
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
             {
-                return CoreEnvironment.OsType.FreeBsd;
+                return OsType.FreeBsd;
             }
 
-            return CoreEnvironment.OsType.Indeterminate;
+            return OsType.Indeterminate;
         }
 
         /// <summary>
@@ -136,6 +137,7 @@ namespace RocketRMM
             Directory.CreateDirectory(CaDir);
             Directory.CreateDirectory($"{CaIntermediateDir}{Path.DirectorySeparatorChar}revoked");
             Directory.CreateDirectory($"{CertificatesDir}{Path.DirectorySeparatorChar}revoked");
+            Directory.CreateDirectory($"{CertificatesDir}{Path.DirectorySeparatorChar}sam");
             Directory.CreateDirectory(CrlDir);
 
             _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
