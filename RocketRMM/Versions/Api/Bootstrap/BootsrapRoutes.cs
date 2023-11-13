@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using RocketRMM.Data.Logging;
+using System.Net.Http.Headers;
 
 namespace RocketRMM.Api.Bootstrap
 {
@@ -92,6 +93,14 @@ namespace RocketRMM.Api.Bootstrap
                         zeroConf.RefreshToken = CoreEnvironment.Secrets.RefreshToken;
                         zeroConf.IsBootstrapped = true;
                         _ = zeroConf.Save();
+
+                        _ = LogsDbThreadSafeCoordinator.ThreadSafeAdd(new LogEntry()
+                        {
+                            Message = $"Bootstrap completed successfully, graph refresh token obtained.",
+                            Severity = "Information",
+                            API = "ReceiveGraphToken"
+                        });
+
                         //redirect to success page
                         context.Response.Redirect($"{CoreEnvironment.FrontEndUri}/setup/graphtoken/success");
                     }
