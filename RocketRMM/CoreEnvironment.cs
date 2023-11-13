@@ -268,7 +268,7 @@ namespace RocketRMM
         /// <returns></returns>
         internal static async Task<byte[]> GetEntropyBytes()
         {
-            string entropyBytesPath = $"{PersistentDir}{Path.DirectorySeparatorChar}unique.entropy.bytes";
+            string entropyBytesPath = $"{DataDir}{Path.DirectorySeparatorChar}unique.entropy.bytes";
             if (!File.Exists(entropyBytesPath))
             {
                 await File.WriteAllTextAsync(entropyBytesPath, await Utilities.Crypto.RandomByteString(4098,true));
@@ -283,7 +283,7 @@ namespace RocketRMM
         /// <returns></returns>
         internal static async Task<bool> CheckForBootstrap()
         {
-            string bootstrapPath = $"{PersistentDir}{Path.DirectorySeparatorChar}bootstrap.json";
+            string bootstrapPath = $"{DataDir}{Path.DirectorySeparatorChar}bootstrap.json";
             try
             {
 
@@ -330,11 +330,11 @@ namespace RocketRMM
         {
             try
             {
-                string deviceTokenPath = $"{PersistentDir}{Path.DirectorySeparatorChar}device.id.token";
+                string deviceTokenPath = $"{DataDir}{Path.DirectorySeparatorChar}device.id.token";
 
                 if (!File.Exists(deviceTokenPath))
                 {
-                    if(!Directory.Exists(PersistentDir))
+                    if(!Directory.Exists(DataDir))
                     {
                         DataAndCacheDirectoriesBuild();
                     }

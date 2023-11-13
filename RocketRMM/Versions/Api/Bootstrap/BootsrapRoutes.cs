@@ -101,6 +101,7 @@ namespace RocketRMM.Api.Bootstrap
                             API = "ReceiveGraphToken"
                         });
 
+
                         //redirect to success page
                         context.Response.Redirect($"{CoreEnvironment.FrontEndUri}/setup/graphtoken/success");
                     }
