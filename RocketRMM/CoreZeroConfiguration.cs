@@ -78,7 +78,7 @@ namespace RocketRMM
                     };
 
                     _ = zeroConf.Save();
-                    string bootstrapPath = $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}bootstrap.json";
+                    string bootstrapPath = $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}bootstrap.json";
                     await File.WriteAllTextAsync(bootstrapPath, await Utilities.Crypto.RandomByteString());
                     File.Delete(bootstrapPath);
 
@@ -140,7 +140,7 @@ const config = {{
                 }
                 else if (!CoreEnvironment.CheckForBootstrap().Result)
                 {
-                    Utilities.ConsoleColourWriteLine($"Waiting for bootstrap.json to be placed at {CoreEnvironment.DataDir} to provision the API...");
+                    Utilities.ConsoleColourWriteLine($"Waiting for bootstrap.json to be placed at {CoreEnvironment.PersistentDir} to provision the API...");
                 }
             }
             catch (Exception ex)
@@ -159,7 +159,7 @@ const config = {{
 
         internal static async Task<CoreZeroConfiguration?> Read()
         {
-            string apiZeroConfPath = $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}api.zeroconf.aes";
+            string apiZeroConfPath = $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes";
 
             if (File.Exists(apiZeroConfPath))
             {
@@ -173,7 +173,7 @@ const config = {{
         {
             try
             {
-                _ = Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.DataDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true, null, true);
+                _ = Utilities.WriteJsonToFile<CoreZeroConfiguration>(this, $"{CoreEnvironment.PersistentDir}{Path.DirectorySeparatorChar}api.zeroconf.aes", true, null, true);
                 CoreEnvironment.Secrets.TenantId = TenantId;
                 CoreEnvironment.Secrets.ApplicationId = ClientId;
                 CoreEnvironment.Secrets.RefreshToken = RefreshToken;
