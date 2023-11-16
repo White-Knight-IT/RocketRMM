@@ -330,7 +330,7 @@ namespace RocketRMM
         {
             try
             {
-                string deviceTokenPath = $"{PersistentDirr}{Path.DirectorySeparatorChar}device.id.token";
+                string deviceTokenPath = $"{PersistentDir}{Path.DirectorySeparatorChar}device.id.token";
 
                 if (!File.Exists(deviceTokenPath))
                 {
